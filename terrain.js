@@ -33,15 +33,18 @@ const Terrain = (() => {
   }
 
   function sampleRoute(points, width, height, terrain) {
-    const { columns, rows } = terrain.grid;
+    const { columns, rows } = terrain?.grid ?? {
+      columns: Math.min(512, width / 16), rows: Math.min(512, height / 16),
+    };
     const sampleSpacing = Math.min(width / columns, height / rows);
     const pieces = [];
     let sampledMeters = 0;
     let classifiedMeters = 0;
     let waterMeters = 0;
+    let previousLeg = null;
 
     function sample(x, y) {
-      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+      if (!terrain || x < 0 || x > 1 || y < 0 || y > 1) return null;
       return terrain.rows[Math.min(rows - 1, Math.floor(y * rows))][Math.min(columns - 1, Math.floor(x * columns))];
     }
 
@@ -53,6 +56,18 @@ const Terrain = (() => {
       if (!distance) continue;
       const ux = dx * width / distance;
       const uy = dy * height / distance;
+      // Round a waypoint within the nearby legs, allowing up to 12 m on each
+      // side of a sparse corner. Shorter legs constrain the available radius.
+      let turnRadius = Infinity;
+      if (previousLeg) {
+        const dot = Math.max(-1, Math.min(1, previousLeg.ux * ux + previousLeg.uy * uy));
+        const cross = Math.abs(previousLeg.ux * uy - previousLeg.uy * ux);
+        const angle = Math.atan2(cross, dot);
+        if (angle > 1e-6) {
+          turnRadius = dot === -1 ? 0 : Math.min(12, previousLeg.distance / 2, distance / 2) / Math.tan(angle / 2);
+        }
+      }
+      previousLeg = { ux, uy, distance };
       const count = Math.max(1, Math.ceil(2 * Math.hypot(dx * columns, dy * rows)));
       const horizontal = distance / count;
       for (let part = 0; part < count; part++) {
@@ -79,7 +94,8 @@ const Terrain = (() => {
           }
         }
         grade = Math.max(-0.45, Math.min(0.45, grade));
-        pieces.push({ distance: horizontal * Math.hypot(1, grade), grade, surface });
+        pieces.push({ distance: horizontal * Math.hypot(1, grade), grade, surface,
+          turnRadius: part === 0 ? turnRadius : Infinity });
       }
     }
     return { pieces, sampledMeters, classifiedMeters, waterMeters };
@@ -90,13 +106,13 @@ const Terrain = (() => {
   }
 
   function drivingConditions(pieces, tracked) {
-    return pieces.map(({ distance, grade, surface }) => {
+    return pieces.map(({ distance, grade, surface, turnRadius }) => {
       const pace = surfacePace[surface?.type]?.[tracked ? 1 : 0] ?? 1;
       const friction = isClassified(surface) && surface.type !== "Water" && Number.isFinite(surface.friction)
         ? Math.sqrt(Math.max(0.25, Math.min(1, surface.friction / 0.95)))
         : 1;
       const gradePace = 1 / (1 + 4 * Math.max(0, grade) + 1.25 * Math.max(0, -grade));
-      return { distance, grade, speedFactor: pace * gradePace, powerFactor: pace * friction, gripFactor: friction };
+      return { distance, grade, turnRadius, speedFactor: pace * gradePace, powerFactor: pace * friction, gripFactor: friction };
     });
   }
 

@@ -2,7 +2,7 @@
 
 const Driving = (() => {
   const drivetrainEfficiency = 0.85;
-  const gripAcceleration = 0.55 * 9.81;
+  const firmGroundGrip = 0.55 * 9.81;
   const speedStep = 0.15;
 
   function engineTorque(keys, rpm) {
@@ -28,6 +28,12 @@ const Driving = (() => {
 
   function prepare(profile) {
     const { radiusMeters, massKg, gears, torque, idleRpm, brakeTorqueNm, shiftSeconds } = profile;
+    const referenceFriction = profile.tracked ? 3 : 2.1;
+    const gripAcceleration = firmGroundGrip * (profile.frictionMultiplier > 0 ? profile.frictionMultiplier / referenceFriction : 1);
+    // The exported configs contain body width, but not wheelbase. Estimate
+    // a wheelbase from width for the tight-turn penalty on wheeled vehicles.
+    const minTurnRadius = !profile.tracked && profile.widthMeters > 0 && profile.steeringAngleDegrees > 0
+      ? 1.5 * profile.widthMeters / Math.tan(profile.steeringAngleDegrees * Math.PI / 180) : 0;
     const braking = Math.min(gripAcceleration, brakeTorqueNm / (radiusMeters * massKg));
     const metersPerRotation = 2 * Math.PI * radiusMeters;
     const maxSpeed = profile.speedLimitKmh / 3.6;
@@ -65,7 +71,8 @@ const Driving = (() => {
       if (speed === maxSpeed) break;
     }
 
-    return speed > 0 && braking > 0 && Number.isFinite(time) ? { samples, braking, shifts } : null;
+    return speed > 0 && braking > 0 && Number.isFinite(time)
+      ? { samples, braking, shifts, gripAcceleration, minTurnRadius } : null;
   }
 
   function accelerationAt(samples, speed) {
@@ -128,15 +135,27 @@ const Driving = (() => {
 
   function travelTerrainSeconds(pieces, model, speedLimitKmh = Infinity) {
     if (!pieces.length || !(speedLimitKmh > 0)) return 0;
-    if (pieces.every(({ grade, speedFactor, gripFactor }) => grade === 0 && speedFactor === 1 && gripFactor === 1)) {
-      return travelSeconds(pieces.reduce((total, piece) => total + piece.distance, 0), model, speedLimitKmh);
+    const neutral = pieces.every(({ grade, speedFactor, gripFactor }) => grade === 0 && speedFactor === 1 && gripFactor === 1);
+    if (neutral) {
+      const distance = pieces.reduce((total, piece) => total + piece.distance, 0);
+      const straightTime = travelSeconds(distance, model, speedLimitKmh);
+      if (!pieces.some(({ turnRadius }) => Number.isFinite(turnRadius))) return straightTime;
+      // Keep the exact flat-ground estimate and add only the delay caused by
+      // turning. Both passes use the same segments and numerical integration.
+      const withTurns = integrateRoute(pieces, model, speedLimitKmh, true);
+      const withoutTurns = integrateRoute(pieces, model, speedLimitKmh, false);
+      return straightTime + Math.max(0, withTurns - withoutTurns);
     }
+    return integrateRoute(pieces, model, speedLimitKmh, true);
+  }
 
-    const { samples, shifts } = model;
+  function integrateRoute(pieces, model, speedLimitKmh, applyTurns) {
+    const { samples, shifts, gripAcceleration, minTurnRadius } = model;
     const maxSpeed = samples.at(-1).speed;
     const userLimit = speedLimitKmh / 3.6;
-    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor }) => ({
+    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor, turnRadius }) => ({
       distance,
+      turnRadius,
       cap: Math.min(userLimit, maxSpeed * speedFactor),
       grip: gripAcceleration * gripFactor,
       power: powerFactor * (grade > 0 ? 1 / (1 + 7 * grade) : 1 - 1.5 * grade),
@@ -145,10 +164,13 @@ const Driving = (() => {
     }));
     const safeSpeeds = new Float64Array(segments.length + 1);
     // Set approach speeds from the destination backwards so the vehicle can
-    // slow for a surface change or stop without jumping to a lower speed.
+    // slow for a corner, a surface change, or a stop without jumping to a lower speed.
     for (let index = segments.length - 1; index >= 0; index--) {
-      const { cap, distance, braking } = segments[index];
-      safeSpeeds[index] = Math.min(cap, Math.sqrt(safeSpeeds[index + 1] ** 2 + 2 * braking * distance));
+      const { cap, distance, braking, grip, turnRadius } = segments[index];
+      const cornerGrip = Math.min(grip, segments[index - 1]?.grip ?? grip);
+      const tightTurnFactor = turnRadius < minTurnRadius ? Math.sqrt(turnRadius / minTurnRadius) : 1;
+      const cornerSpeed = applyTurns && Number.isFinite(turnRadius) ? Math.sqrt(cornerGrip * turnRadius) * tightTurnFactor : Infinity;
+      safeSpeeds[index] = Math.min(cap, cornerSpeed, Math.sqrt(safeSpeeds[index + 1] ** 2 + 2 * braking * distance));
     }
 
     let time = 0;
