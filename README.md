@@ -4,7 +4,7 @@ Open `index.html` in a browser. The planner runs locally using the bundled SDK c
 
 1. Choose a map and a vehicle. The vehicle list is grouped by faction.
 2. Click the minimap to add waypoints or drag to trace a route. Undo removes the last click or drag. Pan and the zoom controls help with detailed routes.
-3. Adjust **Average route speed** for the way you expect to drive or fly. The distance and estimated time update as you edit the route or change vehicles.
+3. The estimate updates as you draw or change vehicles. Where SDK driving data is available, choose a vehicle configuration if prompted and optionally set a **Speed limit**. Vehicles without a usable driving profile use the editable **Average route speed**.
 
 ## Refresh the SDK data
 
@@ -33,4 +33,10 @@ The SDK vehicle stats table has no rows in v10.6.1. Measured acceleration from r
 
 ## How the estimate works
 
-Route distance is the sum of the horizontal distances between consecutive points, using separate scales for the minimap's width and height. Travel time is that distance divided by the average route speed. The starting speed is a heuristic based on the SDK vehicle icon category. It can be replaced with a speed measured in-game. The route calculation uses the drawn line and does not simulate acceleration, terrain, or obstacles.
+Route distance is the sum of the horizontal distances between consecutive points, using separate scales for the minimap's width and height.
+
+The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit and optional driver speed limit cap the modeled speed.
+
+The model assumes flat, firm ground, 85% drivetrain efficiency, and an acceleration and braking grip limit of 0.55 g. Bends add distance. Slopes, surface changes, cornering losses, and obstacles are outside the model. Use an optional speed limit for routes where you expect lower speeds.
+
+The average-speed estimate covers vehicles without the necessary SDK inputs, including helicopters and boats. Its starting value is based on the vehicle category and can be replaced with a measured average.

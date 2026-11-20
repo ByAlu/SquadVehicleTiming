@@ -2,6 +2,7 @@
 
 import ast
 import json
+import math
 from pathlib import Path
 import re
 import runpy
@@ -177,6 +178,82 @@ def write_vehicle_files(vehicles):
             path.unlink()
 
 
+def driving_profile(variant):
+    speed_limit = variant.get("noSlipRpmLimitKmh", {}).get("forward")
+    engine = variant.get("engine", {})
+    transmission = variant.get("transmission", {})
+    mass = variant.get("body", {}).get("mass")
+    final_drive = transmission.get("final_drive_ratio")
+    max_rpm = engine.get("max_rpm")
+    torque_scale = engine.get("max_torque")
+    if not all(value and math.isfinite(value) and value > 0
+               for value in (speed_limit, mass, final_drive, max_rpm, torque_scale)):
+        return None
+
+    curve = engine.get("torque_curve", {}).get("unrealText", "")
+    keys = re.search(r"\bKeys=\((\([^()]*\)(?:,\([^()]*\))*)\)", curve)
+    if not keys or "TangentWeightMode=RCTWM_Weighted" in curve:
+        return None
+    for field in ("PreInfinityExtrap", "PostInfinityExtrap"):
+        mode = re.search(rf"\b{field}=(\w+)", curve)
+        if mode and mode.group(1) != "RCCE_Constant":
+            return None
+    torque = []
+    for entry in re.findall(r"\(([^()]*)\)", keys.group(1)):
+        key = dict(field.split("=", 1) for field in entry.split(",") if field)
+        torque.append({
+            "rpm": float(key.get("Time", 0)),
+            "nm": float(key.get("Value", 0)) * torque_scale,
+            "mode": key.get("InterpMode", "RCIM_Linear").removeprefix("RCIM_").lower(),
+            "arrive": float(key.get("ArriveTangent", 0)) * torque_scale,
+            "leave": float(key.get("LeaveTangent", 0)) * torque_scale,
+        })
+    if not any(key["nm"] > 0 for key in torque):
+        return None
+
+    tracks = variant.get("tracks")
+    if tracks:
+        radius = tracks.get("sprocket_radius", 0) / 100
+        brake_torque = 2 * tracks.get("brake_torque", 0)
+    else:
+        wheels = variant.get("wheels", [])
+        radii = {wheel.get("wheel_radius", 0) / 100 for wheel in wheels}
+        if len(radii) != 1:
+            return None
+        radius = next(iter(radii))
+        brake_torque = sum(wheel.get("max_brake_torque", 0) for wheel in wheels)
+    if not (radius > 0 and brake_torque > 0):
+        return None
+
+    gears = []
+    for gear in transmission.get("forward_gear_ratios", []):
+        ratio = gear.get("ratio", 0)
+        if ratio <= 0:
+            continue
+        governor = gear.get("rpm_governor", 0)
+        limit_rpm = min(max_rpm, governor) if tracks and governor > 0 else max_rpm
+        shift_ratio = gear.get("change_up_ratio", 0) if transmission.get("automatic_transmission") else 1
+        gears.append({
+            "ratio": ratio * final_drive,
+            "limitRpm": limit_rpm,
+            "shiftRpm": min(limit_rpm, max_rpm * shift_ratio) if shift_ratio > 0 else limit_rpm,
+        })
+    if not gears:
+        return None
+    blueprint = variant["blueprints"][0].rsplit(".", 1)[-1]
+    return {
+        "name": blueprint.removeprefix("BP_").removesuffix("_C").replace("_", " "),
+        "massKg": mass,
+        "radiusMeters": radius,
+        "idleRpm": engine.get("idle_rpm", 0),
+        "speedLimitKmh": speed_limit,
+        "brakeTorqueNm": brake_torque,
+        "shiftSeconds": max(0, transmission.get("gear_switch_time", 0)),
+        "gears": gears,
+        "torque": torque,
+    }
+
+
 def build_vehicle_catalog():
     vehicles = []
     for path in VEHICLE_ROOT.glob("*/*.json"):
@@ -188,7 +265,10 @@ def build_vehicle_catalog():
         raise RuntimeError("No vehicle JSON files were found.")
     vehicles.sort(key=lambda vehicle: (vehicle["faction"], vehicle["name"].casefold(), vehicle["type"]))
     for vehicle in vehicles:
-        vehicle.pop("sdkPhysics", None)
+        variants = vehicle.pop("sdkPhysics", {}).get("variants", [])
+        profiles = [profile for variant in variants if (profile := driving_profile(variant))]
+        if profiles:
+            vehicle["drivingProfiles"] = profiles
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"

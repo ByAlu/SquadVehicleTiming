@@ -5,6 +5,7 @@ const sdk = window.squadSdkData;
 const vehicles = window.squadVehicles;
 const mapSelect = find("map-select");
 const vehicleSelect = find("vehicle-select");
+const configurationSelect = find("configuration");
 const widthInput = find("width");
 const heightInput = find("height");
 const speedInput = find("speed");
@@ -21,6 +22,8 @@ const route = [];
 const edits = [];
 const scales = new Map();
 const speeds = new Map();
+const configurations = new Map();
+const drivingModels = new WeakMap();
 const keyboardPoint = { x: 0.5, y: 0.5 };
 let keyboardActive = false;
 let mode = "draw";
@@ -31,6 +34,7 @@ let left = 0;
 let mapTop = 0;
 let drawnWidth = 0;
 let drawnHeight = 0;
+let activeDrivingModel = null;
 
 function selectMap() {
   finishGesture();
@@ -80,10 +84,28 @@ function updateMapDetail() {
 function selectVehicle() {
   const vehicle = vehicles[Number(vehicleSelect.value)];
   find("vehicle-detail").textContent = [vehicle.faction, vehicle.type].filter(Boolean).join(" · ");
-  speedInput.value = speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "";
-  find("speed-detail").textContent = vehicle.assumedSpeedKmh
-    ? `Starting assumption ${numeric.format(vehicle.assumedSpeedKmh)} km/h. Adjust for your route conditions.`
-    : "Enter an average speed for your route conditions.";
+  configurationSelect.replaceChildren();
+  for (const [index, profile] of (vehicle.drivingProfiles ?? []).entries()) {
+    if (!drivingModels.has(profile)) drivingModels.set(profile, Driving.prepare(profile));
+    if (drivingModels.get(profile)) configurationSelect.add(new Option(profile.name, index));
+  }
+  const hasChoices = configurationSelect.options.length > 1;
+  configurationSelect.hidden = !hasChoices;
+  find("configuration-label").hidden = !hasChoices;
+  configurationSelect.value = configurations.get(vehicle.id) ?? configurationSelect.options[0]?.value ?? "";
+  selectConfiguration();
+}
+
+function selectConfiguration() {
+  const vehicle = vehicles[Number(vehicleSelect.value)];
+  const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
+  activeDrivingModel = profile ? drivingModels.get(profile) : null;
+  find("speed-label").textContent = activeDrivingModel ? "Speed limit (optional)" : "Average route speed";
+  speedInput.placeholder = activeDrivingModel ? "Automatic" : "";
+  speedInput.value = speeds.get(vehicle.id) ?? (activeDrivingModel ? "" : vehicle.assumedSpeedKmh ?? "");
+  find("speed-detail").textContent = activeDrivingModel
+    ? `SDK gearing limit ${numeric.format(profile.speedLimitKmh)} km/h. Flat ground, from rest to rest.`
+    : "Average-speed estimate. Adjust the speed for your route conditions.";
   updateEstimate();
 }
 
@@ -92,7 +114,14 @@ function updateEstimate() {
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
   const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(route, width, height) : 0;
-  const seconds = speed >= 0.1 ? RouteMath.travelSeconds(distance, speed) : 0;
+  let seconds = 0;
+  if (speedInput.validity.valid) {
+    if (activeDrivingModel) {
+      seconds = Driving.travelSeconds(distance, activeDrivingModel, speedInput.value === "" ? Infinity : speed);
+    } else if (speed >= 0.1) {
+      seconds = RouteMath.travelSeconds(distance, speed);
+    }
+  }
   find("distance").textContent = distance > 0
     ? distance >= 1000 ? `${numeric.format(distance / 1000)} km` : `${numeric.format(distance)} m`
     : "—";
@@ -339,6 +368,10 @@ if (sdk?.maps.length && vehicles?.length) {
   });
   mapSelect.addEventListener("change", selectMap);
   vehicleSelect.addEventListener("change", selectVehicle);
+  configurationSelect.addEventListener("change", () => {
+    configurations.set(vehicles[Number(vehicleSelect.value)].id, configurationSelect.value);
+    selectConfiguration();
+  });
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);

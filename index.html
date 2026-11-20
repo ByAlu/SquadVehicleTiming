@@ -9,6 +9,7 @@
   <script src="sdk-data.js" defer></script>
   <script src="vehicles/catalog.js" defer></script>
   <script src="route.js" defer></script>
+  <script src="driving.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -38,9 +39,11 @@
         <label for="vehicle-select">Vehicle</label>
         <select id="vehicle-select"></select>
         <div class="detail" id="vehicle-detail"></div>
-        <label for="speed">Average route speed</label>
+        <label id="configuration-label" for="configuration" hidden>Vehicle configuration</label>
+        <select id="configuration" hidden></select>
+        <label id="speed-label" for="speed">Average route speed</label>
         <div class="speed-field">
-          <input id="speed" type="number" min="0.1" step="0.1" inputmode="decimal" aria-describedby="speed-detail">
+          <input id="speed" type="number" min="0.1" step="any" inputmode="decimal" aria-describedby="speed-detail">
           <span>km/h</span>
         </div>
         <p class="detail" id="speed-detail"></p>
