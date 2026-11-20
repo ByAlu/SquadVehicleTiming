@@ -129,8 +129,8 @@ def get_map(name):
         return result
     bounds = property_value(asset, "MinimapCornersPosition")
     if bounds and bounds.is_valid:
-        height = round(abs(bounds.max.x - bounds.min.x) / 100, 3)
-        width = round(abs(bounds.max.y - bounds.min.y) / 100, 3)
+        width = round(abs(bounds.max.x - bounds.min.x) / 100, 3)
+        height = round(abs(bounds.max.y - bounds.min.y) / 100, 3)
         if width >= 1 and height >= 1:
             result.update(widthMeters=width, heightMeters=height, scaleLabel="SDK layer scale",
                           sourceLayer=layer)

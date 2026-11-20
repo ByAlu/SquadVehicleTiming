@@ -31,6 +31,24 @@ Look for `sdkPhysics` in the individual vehicle JSON files. The exporter follows
 
 The SDK vehicle stats table has no rows in v10.6.1. Measured acceleration from rest, achievable top speed, and braking distance require a running vehicle under specified surface, slope, and driving conditions. A profile with only a Blueprint or movement class indicates that the extractor could link the variant but could not read a compatible motion configuration.
 
+## Terrain data
+
+Export the terrain grid for one or more maps from the repository in PowerShell. Use `-SpacingMeters` to trade file size and export time for finer samples.
+
+```powershell
+.\tools\export-terrain.ps1 -Map 'Yehorivka','Logar Valley' -SpacingMeters 16
+```
+
+Omit `-Map` to export the maps with calibrated SDK bounds in `sdk-data.js`. The editor loads the gameplay worlds locally and writes `maps/<map>/terrain.json`. Loading a map for the first time may take several minutes while Unreal builds cached assets.
+
+The rows follow the minimap from top to bottom and the cells from left to right. Each cell samples the center of its grid square. Use `floor(u × columns)` and `floor(v × rows)` for normalized minimap coordinates, clamping the right and bottom edges to the last column and row. The grid metadata gives the world origin, directions, and actual sample spacing.
+
+Each hit stores **world Z in decimeters**, **grade to the right**, **grade downward**, and a **surface index**. The elevation datum is the Unreal map's Z origin. A grade of 100 represents a 10% climb. For a route heading given as a unit vector in map meters, multiply each grade by its matching heading component and add them to get the directional grade. Surface entries preserve the SDK physical surface name, collision source, material asset, and friction values where available.
+
+A `null` cell means the vehicle collision trace found no blocking surface. The scan skips invisible collision volumes and instanced foliage. It can still hit roads, bridges, roofs, and other solid geometry. Water that only overlaps vehicles may appear as the riverbed below. Narrow features can fall between samples.
+
+`materialSource` records how the physical material was resolved. A trace result or a collision override identifies the material directly. A mesh material or landscape default is a fallback. An unknown surface still carries elevation and grade when its collision was sampled.
+
 ## How the estimate works
 
 Route distance is the sum of the horizontal distances between consecutive points, using separate scales for the minimap's width and height.
