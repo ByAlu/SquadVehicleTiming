@@ -1,4 +1,4 @@
-# Squad Route Planner
+# Squad Vehicle Timing
 
 Open `index.html` in a browser. The planner runs locally using the bundled SDK catalog and the repository's minimaps.
 
