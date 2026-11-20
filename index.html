@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Draw a route on a Squad minimap and estimate its in-game vehicle travel time.">
+  <title>Squad Route Planner</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="sdk-data.js" defer></script>
+  <script src="route.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand-icon" aria-hidden="true">⌖</span>
+    <span class="brand">Squad <span>Route Planner</span></span>
+    <span class="version" id="version"></span>
+  </header>
+  <main class="planner">
+    <aside class="sidebar" aria-label="Route settings">
+      <section class="estimate" aria-labelledby="estimate-label">
+        <h1 id="estimate-label">Estimated travel time</h1>
+        <output class="time" id="time" aria-live="polite">—</output>
+        <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
+      </section>
+      <section class="settings" aria-label="Map and vehicle">
+        <label for="map-select">Map</label>
+        <select id="map-select"></select>
+        <div class="detail" id="map-detail"></div>
+        <details id="calibration">
+          <summary>Map scale</summary>
+          <div class="size-fields">
+            <label>Width (m)<input id="width" type="number" min="1" step="any" inputmode="decimal"></label>
+            <label>Height (m)<input id="height" type="number" min="1" step="any" inputmode="decimal"></label>
+          </div>
+        </details>
+        <label for="vehicle-select">Vehicle</label>
+        <select id="vehicle-select"></select>
+        <div class="detail" id="vehicle-detail"></div>
+        <label for="speed">Average route speed</label>
+        <div class="speed-field">
+          <input id="speed" type="number" min="0.1" step="0.1" inputmode="decimal" aria-describedby="speed-detail">
+          <span>km/h</span>
+        </div>
+        <p class="detail" id="speed-detail"></p>
+      </section>
+    </aside>
+    <section class="map-panel" aria-labelledby="map-heading">
+      <div class="map-top">
+        <div><h2 id="map-heading"></h2><p>Click to add waypoints or drag to trace a route.</p></div>
+        <div class="tools" role="group" aria-label="Route tools">
+          <button id="draw" type="button" aria-pressed="true">Draw</button>
+          <button id="pan" type="button" aria-pressed="false">Pan</button>
+          <button id="undo" type="button">Undo</button>
+          <button id="clear" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="viewport" class="viewport" tabindex="0" role="region" aria-label="Interactive route map" aria-describedby="map-keys">
+        <span id="map-keys" class="sr-only">Arrow keys move the cursor. Enter or Space adds a waypoint in Draw mode. Plus and minus change zoom. Control Z undoes the last edit.</span>
+        <div class="map-stage" id="stage">
+          <img id="map-image" alt="" draggable="false">
+          <svg id="overlay" aria-hidden="true">
+            <polyline id="route-shadow"></polyline>
+            <polyline id="route-line"></polyline>
+            <g id="markers"></g>
+            <circle id="cursor" r="7" visibility="hidden"></circle>
+          </svg>
+        </div>
+        <div class="map-message" id="map-message" role="status" hidden></div>
+      </div>
+      <div class="map-bottom">
+        <span id="route-status">Add a start point.</span>
+        <div class="tools zoom" role="group" aria-label="Map zoom">
+          <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+          <button id="zoom-fit" type="button" aria-label="Fit map">100%</button>
+          <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
