@@ -48,6 +48,7 @@
       </section>
       <section class="estimate" aria-labelledby="estimate-label">
         <h1 id="estimate-label">Estimated travel time</h1>
+        <p class="detail" id="estimate-path" hidden></p>
         <output class="time" id="time" aria-live="polite">—</output>
         <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
         <div class="distance"><span>Estimated average speed</span><output id="average-speed">—</output></div>
@@ -56,7 +57,7 @@
     </aside>
     <section class="map-panel" aria-labelledby="map-heading">
       <div class="map-top">
-        <div><h2 id="map-heading"></h2><p>Left-click to add a node. Right-click a node to remove it.</p></div>
+        <div><h2 id="map-heading"></h2><p>Click a node to select it. Click the map to add a branch. Right-click a node to remove it.</p></div>
         <div class="tools" role="group" aria-label="Route tools">
           <button id="draw" type="button" aria-pressed="true">Draw</button>
           <button id="pan" type="button" aria-pressed="false">Pan</button>
@@ -65,12 +66,13 @@
         </div>
       </div>
       <div id="viewport" class="viewport" tabindex="0" role="region" aria-label="Interactive route map" aria-describedby="map-keys">
-        <span id="map-keys" class="sr-only">Arrow keys move the cursor. Enter or Space adds a node in Draw mode. Delete removes a node under the cursor. Plus and minus change zoom. Control Z undoes the last edit.</span>
+        <span id="map-keys" class="sr-only">Arrow keys move the cursor. In Draw mode, Enter or Space selects a node under the cursor or adds a child to the selected node. Delete removes a node under the cursor. Plus and minus change zoom. Control Z undoes the last edit.</span>
         <div class="map-stage" id="stage">
           <img id="map-image" alt="" draggable="false">
           <svg id="overlay" aria-hidden="true">
-            <polyline id="route-shadow"></polyline>
-            <polyline id="route-line"></polyline>
+            <path id="route-shadow"></path>
+            <path id="route-line"></path>
+            <path id="selected-route"></path>
             <g id="markers"></g>
             <circle id="cursor" r="7" visibility="hidden"></circle>
           </svg>
@@ -79,7 +81,7 @@
       </div>
       <ol id="route-node-list" class="sr-only" aria-label="Route nodes and elapsed times"></ol>
       <div class="map-bottom">
-        <span id="route-status">Add node 1.</span>
+        <span id="route-status" role="status">Add node 1.</span>
         <div class="tools zoom" role="group" aria-label="Map zoom">
           <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
           <button id="zoom-fit" type="button" aria-label="Fit map">100%</button>

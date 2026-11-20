@@ -29,6 +29,8 @@ const configurations = new Map();
 const drivingModels = new WeakMap();
 const vehiclesByFaction = new Map();
 const selectedVehicles = new Map();
+const routeEstimates = new Map();
+const terrainEdges = new Map();
 const keyboardPoint = { x: 0.5, y: 0.5 };
 let keyboardActive = false;
 let mode = "draw";
@@ -43,9 +45,8 @@ let activeDrivingModel = null;
 let activeGroundVehicle = false;
 let activeTrackedVehicle = false;
 let terrainGrid = null;
-let routeTerrain = null;
 let terrainStatus = "unavailable";
-let nodeTimes = [];
+let selectedNode = null;
 
 function selectMap() {
   finishGesture();
@@ -87,6 +88,7 @@ function selectMap() {
       if (request !== loadId) return;
       terrainGrid = grid;
       terrainStatus = "ready";
+      routeEstimates.clear();
       updateEstimate();
     }).catch(() => {
       if (request !== loadId) return;
@@ -151,6 +153,7 @@ function selectConfiguration() {
   find("speed-detail").textContent = activeDrivingModel
     ? "SDK driving profile. Starts from rest and passes through each node."
     : "Average-speed estimate.";
+  routeEstimates.clear();
   updateEstimate();
 }
 
@@ -158,32 +161,56 @@ function formatDistance(meters) {
   return meters >= 1000 ? `${numeric.format(meters / 1000)} km` : `${numeric.format(meters)} m`;
 }
 
+function pathTo(node) {
+  const path = [];
+  for (let current = node; current; current = current.parent) path.push(current);
+  return path.reverse();
+}
+
+function samplePathTerrain(path, width, height) {
+  const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
+  for (const node of path.slice(1)) {
+    if (!terrainEdges.has(node)) {
+      terrainEdges.set(node, Terrain.sampleRoute([node.parent, node], width, height, terrainGrid));
+    }
+    const edge = terrainEdges.get(node);
+    terrain.pieces.push(...edge.pieces);
+    terrain.sampledMeters += edge.sampledMeters;
+    terrain.classifiedMeters += edge.classifiedMeters;
+    terrain.waterMeters += edge.waterMeters;
+  }
+  return terrain;
+}
+
+function estimatePath(node, width, height, speed) {
+  const path = pathTo(node);
+  const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(path, width, height) : 0;
+  const { pieces, ...coverage } = distance > 0 && activeGroundVehicle && terrainGrid ? samplePathTerrain(path, width, height) : {};
+  let seconds = null;
+  if (distance > 0 && (activeDrivingModel || (speedInput.validity.valid && speed >= 0.1))) {
+    const conditions = coverage.sampledMeters ? Terrain.drivingConditions(pieces, activeTrackedVehicle) : null;
+    if (conditions) {
+      seconds = activeDrivingModel ? Driving.travelTerrainSeconds(conditions, activeDrivingModel) :
+        conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+    } else {
+      seconds = activeDrivingModel ? Driving.travelSeconds(distance, activeDrivingModel) : RouteMath.travelSeconds(distance, speed);
+    }
+  }
+  return { distance, seconds, terrain: pieces ? coverage : null };
+}
+
 function updateEstimate() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
-  const distances = width >= 1 && height >= 1 ? RouteMath.legDistances(route, width, height) : [];
-  const distance = distances.reduce((total, meters) => total + meters, 0);
-  const useTerrain = activeGroundVehicle && terrainGrid && distance > 0;
-  if (useTerrain && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
-  const terrain = useTerrain ? routeTerrain : null;
-  const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
-  const hasSpeed = speedInput.validity.valid && speed >= 0.1;
-  let legTimes = [];
-  if (distance > 0 && (activeDrivingModel || hasSpeed)) {
-    if (conditions) {
-      const pieceTimes = activeDrivingModel ? Driving.travelTerrainPieceSeconds(conditions, activeDrivingModel) :
-        conditions.map((piece) => RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor));
-      legTimes = distances.map(() => 0);
-      pieceTimes.forEach((seconds, index) => { legTimes[terrain.pieces[index].legIndex] += seconds; });
-    } else {
-      legTimes = activeDrivingModel ? Driving.travelLegSeconds(distances, activeDrivingModel) :
-        distances.map((meters) => RouteMath.travelSeconds(meters, speed));
-    }
+  for (const node of route) {
+    if (!routeEstimates.has(node)) routeEstimates.set(node, estimatePath(node, width, height, speed));
   }
-  nodeTimes = [0];
-  for (const time of legTimes) nodeTimes.push(nodeTimes.at(-1) + time);
-  const seconds = nodeTimes.at(-1);
+  const { distance, seconds, terrain } = routeEstimates.get(selectedNode) ?? { distance: 0 };
+  const selectedNumber = route.indexOf(selectedNode) + 1;
+  const estimatePathDetail = find("estimate-path");
+  estimatePathDetail.hidden = !selectedNumber;
+  estimatePathDetail.textContent = selectedNumber > 1 ? `Node 1 → Node ${selectedNumber}` : "Node 1";
   find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
   const hasEstimate = seconds > 0 && Number.isFinite(seconds);
   find("time").textContent = hasEstimate ? RouteMath.formatTime(seconds) : "—";
@@ -199,9 +226,11 @@ function updateEstimate() {
   }
   terrainDetail.hidden = !activeGroundVehicle || (!terrain && terrainStatus === "ready");
   renderRouteLabels();
-  find("route-node-list").replaceChildren(...route.map((_, index) => {
+  find("route-node-list").replaceChildren(...route.map((node, index) => {
     const item = document.createElement("li");
-    item.textContent = `Node ${index + 1}, ${nodeTimeLabel(index)} elapsed`;
+    const parent = node.parent ? `, connected to node ${route.indexOf(node.parent) + 1}` : ", start";
+    const selection = node === selectedNode ? ", selected" : "";
+    item.textContent = `Node ${index + 1}${parent}${selection}, ${nodeTimeLabel(node)} elapsed`;
     return item;
   }));
 }
@@ -223,9 +252,10 @@ function mapLabel(x, y, label, className) {
   return text;
 }
 
-function nodeTimeLabel(index) {
-  if (index === 0) return "0s";
-  return Number.isFinite(nodeTimes[index]) ? RouteMath.formatTime(nodeTimes[index]) : "—";
+function nodeTimeLabel(node) {
+  if (!node.parent) return "0s";
+  const seconds = routeEstimates.get(node)?.seconds;
+  return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
 }
 
 function renderRouteLabels() {
@@ -237,8 +267,9 @@ function renderRouteLabels() {
     marker.setAttribute("cx", x);
     marker.setAttribute("cy", y);
     marker.setAttribute("r", 11);
+    if (point === selectedNode) marker.setAttribute("class", "selected-node");
     const labelOnLeft = x > drawnWidth - 86;
-    const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeTimeLabel(index), "node-time");
+    const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeTimeLabel(point), "node-time");
     elapsed.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
     markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), elapsed);
   });
@@ -246,17 +277,21 @@ function renderRouteLabels() {
 }
 
 function renderRoute() {
-  const points = route.map(({ x, y }) => `${x * drawnWidth},${y * drawnHeight}`).join(" ");
-  find("route-shadow").setAttribute("points", points);
-  find("route-line").setAttribute("points", points);
+  const position = ({ x, y }) => `${x * drawnWidth},${y * drawnHeight}`;
+  const branches = route.filter((node) => node.parent).map((node) => `M${position(node.parent)} L${position(node)}`).join(" ");
+  const selectedPath = pathTo(selectedNode);
+  const selected = selectedPath.map((node, index) => `${index ? "L" : "M"}${position(node)}`).join(" ");
+  find("route-shadow").setAttribute("d", branches);
+  find("route-line").setAttribute("d", branches);
+  find("selected-route").setAttribute("d", selected);
   cursor.setAttribute("cx", keyboardPoint.x * drawnWidth);
   cursor.setAttribute("cy", keyboardPoint.y * drawnHeight);
   cursor.setAttribute("visibility", keyboardActive ? "visible" : "hidden");
 }
 
 function routeChanged() {
-  routeTerrain = null;
-  find("route-status").textContent = route.length ? `${route.length} ${route.length === 1 ? "node" : "nodes"}` : "Add node 1.";
+  const number = route.indexOf(selectedNode) + 1;
+  find("route-status").textContent = number ? `Node ${number} selected · ${route.length} ${route.length === 1 ? "node" : "nodes"}` : "Add node 1.";
   renderRoute();
   updateEstimate();
   updateButtons();
@@ -265,16 +300,28 @@ function routeChanged() {
 function clearRoute() {
   finishGesture();
   route.length = 0;
+  selectedNode = null;
   edits.length = 0;
+  routeEstimates.clear();
+  terrainEdges.clear();
   routeChanged();
 }
 
 function undo() {
   finishGesture();
   if (!edits.length) return;
-  const { index, removed } = edits.pop();
-  if (removed) route.splice(index, 0, removed);
-  else route.splice(index, 1);
+  const { index, removed, children, selection } = edits.pop();
+  if (removed) {
+    route.splice(index, 0, removed);
+    for (const child of children) child.parent = removed;
+    routeEstimates.clear();
+    terrainEdges.clear();
+  } else {
+    const [added] = route.splice(index, 1);
+    routeEstimates.delete(added);
+    terrainEdges.delete(added);
+  }
+  selectedNode = selection;
   routeChanged();
 }
 
@@ -331,15 +378,7 @@ function inside({ x, y }) {
   return x >= 0 && x <= 1 && y >= 0 && y <= 1;
 }
 
-function appendPoint(point) {
-  const previous = route.at(-1);
-  if (previous && previous.x === point.x && previous.y === point.y) return;
-  edits.push({ index: route.length });
-  route.push(point);
-  routeChanged();
-}
-
-function removeNodeAt(point) {
+function nodeIndexAt(point) {
   let nearest = -1;
   let radius = 14;
   route.forEach((node, index) => {
@@ -349,9 +388,32 @@ function removeNodeAt(point) {
       radius = distance;
     }
   });
+  return nearest;
+}
+
+function selectOrAddNode(point) {
+  const index = nodeIndexAt(point);
+  if (index >= 0) {
+    selectedNode = route[index];
+  } else {
+    edits.push({ index: route.length, selection: selectedNode });
+    selectedNode = { ...point, parent: selectedNode };
+    route.push(selectedNode);
+  }
+  routeChanged();
+}
+
+function removeNodeAt(point) {
+  const nearest = nodeIndexAt(point);
   if (nearest < 0) return;
   const [removed] = route.splice(nearest, 1);
-  edits.push({ index: nearest, removed });
+  const children = route.filter((node) => node.parent === removed);
+  const parent = removed.parent ?? children[0] ?? null;
+  edits.push({ index: nearest, removed, children, selection: selectedNode });
+  for (const child of children) child.parent = child === parent ? null : parent;
+  if (selectedNode === removed) selectedNode = parent;
+  routeEstimates.clear();
+  terrainEdges.clear();
   routeChanged();
 }
 
@@ -402,7 +464,7 @@ for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
       const position = localPoint(event);
       const point = mapPoint(position);
       if (inside(point) && Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) <= 5) {
-        appendPoint(point);
+        selectOrAddNode(point);
       }
     }
     finishGesture();
@@ -438,8 +500,7 @@ viewport.addEventListener("keydown", (event) => {
     renderRoute();
   } else if ((event.key === "Enter" || event.key === " ") && mode === "draw") {
     keyboardActive = true;
-    appendPoint({ ...keyboardPoint });
-    renderRoute();
+    selectOrAddNode(keyboardPoint);
   } else if (event.key === "Delete" && keyboardActive) {
     removeNodeAt(keyboardPoint);
   } else if (event.key === "+" || event.key === "=") {
@@ -480,13 +541,15 @@ if (sdk?.maps.length && vehicles?.length) {
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
-      routeTerrain = null;
+      routeEstimates.clear();
+      terrainEdges.clear();
       updateMapDetail();
       updateEstimate();
     });
   }
   speedInput.addEventListener("input", () => {
     speeds.set(vehicles[Number(vehicleSelect.value)].id, speedInput.value);
+    routeEstimates.clear();
     updateEstimate();
   });
   find("draw").addEventListener("click", () => setMode("draw"));

@@ -127,10 +127,12 @@ details { color: var(--muted); font-size: .85rem; }
 .map-stage { position: absolute; top: 0; left: 0; visibility: hidden; user-select: none; }
 .map-stage.ready { visibility: visible; }
 .map-stage img, .map-stage svg { display: block; position: absolute; width: 100%; height: 100%; pointer-events: none; }
-.map-stage polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+#overlay path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 #route-shadow { stroke: #17230f; stroke-width: 8; }
-#route-line { stroke: var(--accent); stroke-width: 4; }
+#route-line { stroke: #a0b889; stroke-width: 4; }
+#selected-route { stroke: var(--accent); stroke-width: 4; }
 #markers circle { fill: var(--accent); stroke: #17230f; stroke-width: 2; }
+#markers .selected-node { stroke: #fff; stroke-width: 3; }
 #overlay text { font: 700 12px "Segoe UI", sans-serif; dominant-baseline: central; }
 .node-number { fill: #14200d; text-anchor: middle; }
 .node-time { fill: var(--accent); stroke: #111615; stroke-width: 4; stroke-linejoin: round; paint-order: stroke; }
