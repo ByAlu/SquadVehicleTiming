@@ -478,7 +478,7 @@ viewport.addEventListener("contextmenu", (event) => {
 });
 
 viewport.addEventListener("wheel", (event) => {
-  if (!drawnWidth || gesture || document.activeElement !== viewport || event.ctrlKey) return;
+  if (!drawnWidth || gesture || !event.deltaY || event.ctrlKey) return;
   event.preventDefault();
   const { x, y } = localPoint(event);
   layoutMap(zoom * (event.deltaY < 0 ? 1.2 : 1 / 1.2), x, y);

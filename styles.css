@@ -43,10 +43,8 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
   display: grid;
   grid-template-areas: "map sidebar";
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
-  gap: 1.25rem;
-  max-width: 100rem;
-  margin: auto;
-  padding: clamp(1rem, 3vw, 2.25rem);
+  gap: clamp(.75rem, 1.4vw, 1.25rem);
+  padding: clamp(.75rem, 1.5vw, 1.5rem);
   align-items: start;
 }
 .sidebar, .map-panel { border: 1px solid var(--border); border-radius: .8rem; background: var(--panel); }
@@ -112,7 +110,7 @@ details { color: var(--muted); font-size: .85rem; }
 .tools button:disabled { color: #aebbb1; opacity: .55; cursor: default; }
 .viewport {
   position: relative;
-  height: clamp(24rem, 70vh, 54rem);
+  height: max(26rem, calc(100dvh - 11rem));
   background-color: #111715;
   background-image: radial-gradient(#354139 1px, transparent 1px);
   background-size: 18px 18px;
@@ -145,7 +143,7 @@ details { color: var(--muted); font-size: .85rem; }
 
 @media (max-width: 760px) {
   .planner { grid-template-areas: "sidebar" "map"; grid-template-columns: minmax(0, 1fr); }
-  .viewport { height: clamp(20rem, 62vh, 40rem); }
+  .viewport { height: clamp(22rem, 72dvh, 48rem); }
 }
 @media (max-width: 420px) {
   .brand { font-size: .95rem; }

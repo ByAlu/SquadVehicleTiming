@@ -5,6 +5,7 @@ Open `index.html` in a browser. The planner runs locally using the bundled SDK c
 1. In the right sidebar, choose a map and a faction, then select one of that faction's vehicles.
 2. Click the minimap in Draw mode to add a numbered node. Select an existing node and click an empty spot to start a new branch from it. Right-click a node to remove it and reconnect its children to its parent. If you remove node 1, its first child becomes the new start. Undo reverses the last addition or removal.
 3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
+4. Scroll over the map to zoom in or out around your pointer. Use Pan to move the map and the percentage button to fit the whole map again.
 
 ## Refresh the SDK data
 
