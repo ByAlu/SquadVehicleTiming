@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:CTM131_LOGI",
+  "name": "CTM131 Logistics",
+  "faction": "PLANMC",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

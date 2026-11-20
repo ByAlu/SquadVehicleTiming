@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_LAV3-C6",
+  "name": "LAV III C6 RWS",
+  "faction": "CAF",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

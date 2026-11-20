@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_Raven-Transport",
+  "name": "Raven Transport",
+  "faction": "WPMC",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

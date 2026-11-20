@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_CH-146-CAS",
+  "name": "CH-146 CAS",
+  "faction": "CAF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

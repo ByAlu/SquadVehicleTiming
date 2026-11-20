@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M7A3",
+  "name": "M7A3",
+  "faction": "USA",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

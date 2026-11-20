@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_M1151-AGS17",
+  "name": "M1151 Technical AGS-17",
+  "faction": "MEI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

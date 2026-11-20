@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_HX60-TRAN",
+  "name": "HX60 Transport",
+  "faction": "ADF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

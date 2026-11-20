@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_Kamaz_5350_LOG",
+  "name": "KamAZ 5350 Logistics",
+  "faction": "RGF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

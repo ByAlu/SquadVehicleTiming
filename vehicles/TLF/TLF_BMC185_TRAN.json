@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_BMC185_TRAN",
+  "name": "BMC-185 Transport",
+  "faction": "TLF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

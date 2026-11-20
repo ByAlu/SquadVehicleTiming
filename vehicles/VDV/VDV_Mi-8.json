@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_Mi-8",
+  "name": "Mi-8",
+  "faction": "VDV",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

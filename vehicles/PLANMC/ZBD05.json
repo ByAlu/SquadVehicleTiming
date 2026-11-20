@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZBD05",
+  "name": "ZBD05",
+  "faction": "PLANMC",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

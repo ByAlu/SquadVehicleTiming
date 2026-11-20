@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_HX60-LOG",
+  "name": "HX60 Logistics",
+  "faction": "ADF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

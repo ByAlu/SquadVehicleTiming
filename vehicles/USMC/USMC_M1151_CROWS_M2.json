@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M1151_CROWS_M2",
+  "name": "M1151 CROWS M2",
+  "faction": "USMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

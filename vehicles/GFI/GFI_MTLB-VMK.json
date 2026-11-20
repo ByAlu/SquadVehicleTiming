@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_MTLB-VMK",
+  "name": "MTLB VMK",
+  "faction": "GFI",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

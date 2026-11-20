@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_MTLB-6MA",
+  "name": "MTLB 6MA UB-32",
+  "faction": "GFI",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

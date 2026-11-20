@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M939-TRAN",
+  "name": "M939 Transport",
+  "faction": "USA",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

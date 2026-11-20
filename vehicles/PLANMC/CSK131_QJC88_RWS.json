@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:CSK131_QJC88_RWS",
+  "name": "CSK131 QJC88 RWS",
+  "faction": "PLANMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_M113A2T-Mk19",
+  "name": "M113A2T Mk19",
+  "faction": "TLF",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

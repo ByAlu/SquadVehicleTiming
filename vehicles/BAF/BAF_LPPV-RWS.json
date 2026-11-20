@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_LPPV-RWS",
+  "name": "LPPV RWS",
+  "faction": "BAF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

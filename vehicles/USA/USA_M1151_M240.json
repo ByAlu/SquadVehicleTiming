@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M1151_M240",
+  "name": "M1151 M240",
+  "faction": "USA",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

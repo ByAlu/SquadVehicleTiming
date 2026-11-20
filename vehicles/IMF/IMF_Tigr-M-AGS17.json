@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Tigr-M-AGS17",
+  "name": "Tigr-M AGS-17",
+  "faction": "IMF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

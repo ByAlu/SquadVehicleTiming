@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_LUV-A1-TRAN",
+  "name": "LUV-A1 Transport",
+  "faction": "CAF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

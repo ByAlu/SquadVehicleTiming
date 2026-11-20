@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_Universal:Quadbike",
+  "name": "Quad Bike",
+  "faction": "Universal",
+  "type": "Bike",
+  "assumedSpeedKmh": 55
+}

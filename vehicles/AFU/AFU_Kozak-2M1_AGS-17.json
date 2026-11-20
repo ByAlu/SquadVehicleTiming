@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_Kozak-2M1_AGS-17",
+  "name": "Kozak-2M1 AGS-17",
+  "faction": "AFU",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

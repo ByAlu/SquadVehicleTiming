@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Technical-Modern-TRAN",
+  "name": "Transport Modern Pickup",
+  "faction": "IMF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

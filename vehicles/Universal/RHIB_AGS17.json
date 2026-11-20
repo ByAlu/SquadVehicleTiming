@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_RHIB:RHIB_AGS17",
+  "name": "RHIB AGS-17",
+  "faction": "Universal",
+  "type": "Boat",
+  "assumedSpeedKmh": 50
+}

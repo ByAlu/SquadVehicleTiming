@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_Technical4seater_M134",
+  "name": "Technical M134 Minigun",
+  "faction": "WPMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZSD05_Logi",
+  "name": "ZSD05 Logistics",
+  "faction": "PLAAGF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

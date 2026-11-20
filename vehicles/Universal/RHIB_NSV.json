@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_RHIB:RHIB_NSV",
+  "name": "RHIB NSV",
+  "faction": "Universal",
+  "type": "Boat",
+  "assumedSpeedKmh": 50
+}

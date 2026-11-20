@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_BMP-1",
+  "name": "BMP-1",
+  "faction": "GFI",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

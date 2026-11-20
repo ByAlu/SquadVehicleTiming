@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_Cobra2-MG3",
+  "name": "Cobra II MG3",
+  "faction": "TLF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

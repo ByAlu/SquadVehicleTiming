@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_BTR-80",
+  "name": "BTR-80",
+  "faction": "RGF",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

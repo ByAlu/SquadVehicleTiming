@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_CTM131_Transport_QJY88",
+  "name": "CTM131 Transport QJY88",
+  "faction": "PLAAGF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

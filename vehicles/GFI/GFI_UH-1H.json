@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_UH-1H",
+  "name": "UH-1H MG3",
+  "faction": "GFI",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

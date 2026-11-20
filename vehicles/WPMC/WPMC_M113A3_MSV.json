@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_M113A3_MSV",
+  "name": "M113A3 MSV",
+  "faction": "WPMC",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

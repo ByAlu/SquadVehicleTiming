@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M1A1",
+  "name": "M1A1",
+  "faction": "USMC",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

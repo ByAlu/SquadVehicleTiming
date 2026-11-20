@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_MT-LBM-6MB",
+  "name": "MT-LBM 6MB",
+  "faction": "IMF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

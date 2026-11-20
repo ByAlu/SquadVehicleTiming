@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M1151_M240",
+  "name": "M1151 M240",
+  "faction": "USMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

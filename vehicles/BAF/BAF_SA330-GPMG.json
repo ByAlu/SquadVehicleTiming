@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_SA330-GPMG",
+  "name": "SA330",
+  "faction": "BAF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

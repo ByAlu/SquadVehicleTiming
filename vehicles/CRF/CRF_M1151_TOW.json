@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CRF/DT_VehicleTable_CRF:CRF_M1151_TOW",
+  "name": "M1151 TOW",
+  "faction": "CRF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:CTM131_TRAN_QJZ89",
+  "name": "CTM131 Transport QJZ89",
+  "faction": "PLA",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

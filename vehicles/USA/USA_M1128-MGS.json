@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M1128-MGS",
+  "name": "M1128 MGS",
+  "faction": "USA",
+  "type": "Mobile gun system",
+  "assumedSpeedKmh": 50
+}

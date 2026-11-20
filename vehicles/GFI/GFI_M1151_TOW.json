@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_M1151_TOW",
+  "name": "M1151 TOW",
+  "faction": "GFI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

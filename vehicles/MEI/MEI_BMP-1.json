@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_BMP-1",
+  "name": "BMP-1",
+  "faction": "MEI",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

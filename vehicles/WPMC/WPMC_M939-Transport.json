@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_M939-Transport",
+  "name": "M939 Transport",
+  "faction": "WPMC",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

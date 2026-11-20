@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:ZBD05",
+  "name": "ZBD05",
+  "faction": "PLA",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

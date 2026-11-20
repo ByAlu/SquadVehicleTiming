@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZBL08",
+  "name": "ZBL08",
+  "faction": "PLAAGF",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

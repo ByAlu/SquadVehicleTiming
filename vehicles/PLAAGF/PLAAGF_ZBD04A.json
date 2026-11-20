@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZBD04A",
+  "name": "ZBD04A",
+  "faction": "PLAAGF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

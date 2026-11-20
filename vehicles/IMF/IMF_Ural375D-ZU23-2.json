@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Ural375D-ZU23-2",
+  "name": "Ural-375D ZU-23-2",
+  "faction": "IMF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

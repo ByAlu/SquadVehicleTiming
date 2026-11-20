@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_Z-8G",
+  "name": "Z-8G",
+  "faction": "PLAAGF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

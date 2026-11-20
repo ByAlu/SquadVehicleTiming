@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_MATV_TOW",
+  "name": "MATV TOW",
+  "faction": "USMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

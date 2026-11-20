@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_LUV-A1-LOG",
+  "name": "LUV-A1 Logistics",
+  "faction": "CAF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

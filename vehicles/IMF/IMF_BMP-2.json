@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_BMP-2",
+  "name": "BMP-2",
+  "faction": "IMF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

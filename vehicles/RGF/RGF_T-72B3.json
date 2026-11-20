@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_T-72B3",
+  "name": "T-72B3",
+  "faction": "RGF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:Minsk400",
+  "name": "Minsk 400",
+  "faction": "MEI",
+  "type": "Bike",
+  "assumedSpeedKmh": 55
+}

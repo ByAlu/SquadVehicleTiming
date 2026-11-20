@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_MSVS-TRAN",
+  "name": "MSVS Transport",
+  "faction": "CAF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

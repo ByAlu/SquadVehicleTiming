@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZTD05",
+  "name": "ZTD05",
+  "faction": "PLANMC",
+  "type": "Mobile gun system",
+  "assumedSpeedKmh": 50
+}

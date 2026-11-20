@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_FV432_L11A1_RWS",
+  "name": "FV432 L11A1 RWS",
+  "faction": "BAF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

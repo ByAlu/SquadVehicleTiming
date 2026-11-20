@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M939_Transport",
+  "name": "M939 Transport",
+  "faction": "USMC",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

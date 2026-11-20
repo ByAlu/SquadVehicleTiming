@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZSL10",
+  "name": "ZSL10",
+  "faction": "PLANMC",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

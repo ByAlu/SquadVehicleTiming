@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_T-72S",
+  "name": "T-72S",
+  "faction": "GFI",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

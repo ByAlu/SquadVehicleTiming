@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_Ural4320-TRAN",
+  "name": "Ural-4320 Transport",
+  "faction": "GFI",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

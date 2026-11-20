@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_Ural375D-TRAN",
+  "name": "Ural-375D Transport",
+  "faction": "MEI",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

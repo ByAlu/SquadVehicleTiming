@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_BTR-82A",
+  "name": "BTR-82A",
+  "faction": "RGF",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

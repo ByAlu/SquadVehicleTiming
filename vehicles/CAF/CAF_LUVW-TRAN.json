@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_LUVW-TRAN",
+  "name": "LUVW Transport",
+  "faction": "CAF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

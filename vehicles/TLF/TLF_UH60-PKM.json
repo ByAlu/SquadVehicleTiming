@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_UH60-PKM",
+  "name": "UH60 PKM",
+  "faction": "TLF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

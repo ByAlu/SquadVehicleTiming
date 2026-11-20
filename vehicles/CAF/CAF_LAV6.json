@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_LAV6",
+  "name": "LAV 6",
+  "faction": "CAF",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

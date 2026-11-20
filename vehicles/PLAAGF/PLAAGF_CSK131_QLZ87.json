@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_CSK131_QLZ87",
+  "name": "CSK131 QLZ87",
+  "faction": "PLAAGF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

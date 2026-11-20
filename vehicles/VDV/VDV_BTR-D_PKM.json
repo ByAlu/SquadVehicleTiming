@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_BTR-D_PKM",
+  "name": "BTR-D PKM",
+  "faction": "VDV",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_CPV_M134",
+  "name": "CPV M134 Minigun",
+  "faction": "WPMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

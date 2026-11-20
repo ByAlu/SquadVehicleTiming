@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_Tigr_M_Kord",
+  "name": "Tigr-M Kord",
+  "faction": "RGF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

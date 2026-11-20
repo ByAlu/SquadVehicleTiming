@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZTD05",
+  "name": "ZTD05",
+  "faction": "PLAAGF",
+  "type": "Mobile gun system",
+  "assumedSpeedKmh": 50
+}

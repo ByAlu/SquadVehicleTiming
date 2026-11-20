@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:CTM131_LOGI",
+  "name": "CTM131 Logistics",
+  "faction": "PLA",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

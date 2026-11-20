@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_Safir-LOG",
+  "name": "Safir Logistics",
+  "faction": "GFI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

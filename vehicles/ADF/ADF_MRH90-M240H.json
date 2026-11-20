@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_MRH90-M240H",
+  "name": "MRH-90",
+  "faction": "ADF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

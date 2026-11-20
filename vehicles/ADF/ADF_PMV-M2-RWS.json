@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_PMV-M2-RWS",
+  "name": "PMV RWS M2",
+  "faction": "ADF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

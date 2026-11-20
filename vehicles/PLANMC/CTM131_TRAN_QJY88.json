@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:CTM131_TRAN_QJY88",
+  "name": "CTM131 QJY88",
+  "faction": "PLANMC",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

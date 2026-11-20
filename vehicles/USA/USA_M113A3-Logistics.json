@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M113A3-Logistics",
+  "name": "M113A3 Logistics",
+  "faction": "USA",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

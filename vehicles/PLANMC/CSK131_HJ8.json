@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:CSK131_HJ8",
+  "name": "CSK131 HJ8",
+  "faction": "PLANMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

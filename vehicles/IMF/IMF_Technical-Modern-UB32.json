@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Technical-Modern-UB32",
+  "name": "Modern Technical UB-32",
+  "faction": "IMF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

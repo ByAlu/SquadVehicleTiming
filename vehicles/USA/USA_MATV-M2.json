@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_MATV-M2",
+  "name": "M-ATV M2",
+  "faction": "USA",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

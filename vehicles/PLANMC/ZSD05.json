@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZSD05",
+  "name": "ZSD05",
+  "faction": "PLANMC",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

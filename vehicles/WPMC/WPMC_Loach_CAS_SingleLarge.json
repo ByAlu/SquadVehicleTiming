@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_Loach_CAS_SingleLarge",
+  "name": "Loach CAS Single Large",
+  "faction": "WPMC",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

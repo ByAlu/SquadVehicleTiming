@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_RHIB:RHIB_M134",
+  "name": "RHIB M134",
+  "faction": "Universal",
+  "type": "Boat",
+  "assumedSpeedKmh": 50
+}

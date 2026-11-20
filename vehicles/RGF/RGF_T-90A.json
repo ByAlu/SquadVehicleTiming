@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_T-90A",
+  "name": "T-90A",
+  "faction": "RGF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

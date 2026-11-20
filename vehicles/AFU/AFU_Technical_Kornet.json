@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_Technical_Kornet",
+  "name": "Technical Kornet",
+  "faction": "AFU",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

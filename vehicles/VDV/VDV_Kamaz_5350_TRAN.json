@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_Kamaz_5350_TRAN",
+  "name": "KamAZ 5350 Transport",
+  "faction": "VDV",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

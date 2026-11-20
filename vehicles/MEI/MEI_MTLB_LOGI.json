@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_MTLB_LOGI",
+  "name": "MT-LB Logistics",
+  "faction": "MEI",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

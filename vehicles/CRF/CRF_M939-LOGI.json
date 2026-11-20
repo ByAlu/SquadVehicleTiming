@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CRF/DT_VehicleTable_CRF:CRF_M939-LOGI",
+  "name": "M939 Logistics",
+  "faction": "CRF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

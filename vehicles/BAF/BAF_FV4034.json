@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_FV4034",
+  "name": "FV4034",
+  "faction": "BAF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

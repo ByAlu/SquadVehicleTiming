@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_MATV-TOW",
+  "name": "M-ATV TOW",
+  "faction": "USA",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

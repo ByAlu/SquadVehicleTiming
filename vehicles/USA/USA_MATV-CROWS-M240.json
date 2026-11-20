@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_MATV-CROWS-M240",
+  "name": "M-ATV CROWS M240",
+  "faction": "USA",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

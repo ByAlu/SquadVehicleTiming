@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_MT-LBM-6MA",
+  "name": "MT-LBM 6MA",
+  "faction": "RGF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

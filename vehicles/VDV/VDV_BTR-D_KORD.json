@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_BTR-D_KORD",
+  "name": "BTR-D Kord",
+  "faction": "VDV",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

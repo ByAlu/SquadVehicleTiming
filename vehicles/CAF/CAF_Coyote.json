@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_Coyote",
+  "name": "Coyote",
+  "faction": "CAF",
+  "type": "",
+  "assumedSpeedKmh": 45
+}

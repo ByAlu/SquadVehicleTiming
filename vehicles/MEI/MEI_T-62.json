@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_T-62",
+  "name": "T-62",
+  "faction": "MEI",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

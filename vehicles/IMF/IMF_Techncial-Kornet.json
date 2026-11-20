@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Techncial-Kornet",
+  "name": "Technical Kornet",
+  "faction": "IMF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:ZSL10_QJZ89",
+  "name": "ZSL10 QJZ89",
+  "faction": "PLA",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

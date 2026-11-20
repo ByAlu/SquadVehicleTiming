@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZSD05_Logi",
+  "name": "ZSD05 Logistics",
+  "faction": "PLANMC",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

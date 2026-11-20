@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:ZBL08",
+  "name": "ZBL08",
+  "faction": "PLANMC",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

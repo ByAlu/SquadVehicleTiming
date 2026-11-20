@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M1151_Mk19",
+  "name": "M1151 Mk19",
+  "faction": "USMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

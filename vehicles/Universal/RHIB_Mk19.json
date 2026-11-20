@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_RHIB:RHIB_Mk19",
+  "name": "RHIB Mk19",
+  "faction": "Universal",
+  "type": "Boat",
+  "assumedSpeedKmh": 50
+}

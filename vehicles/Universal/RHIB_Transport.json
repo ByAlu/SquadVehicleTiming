@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/Universal/DT_VehicleTable_RHIB:RHIB_Transport",
+  "name": "RHIB Transport",
+  "faction": "Universal",
+  "type": "Boat",
+  "assumedSpeedKmh": 50
+}

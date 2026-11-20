@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZSD89_QJZ89",
+  "name": "ZSD89 APC QJZ89",
+  "faction": "PLAAGF",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

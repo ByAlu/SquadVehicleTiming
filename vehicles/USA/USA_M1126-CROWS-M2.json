@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M1126-CROWS-M2",
+  "name": "M1126 CROWS M2",
+  "faction": "USA",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

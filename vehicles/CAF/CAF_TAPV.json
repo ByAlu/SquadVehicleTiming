@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_TAPV",
+  "name": "TAPV",
+  "faction": "CAF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

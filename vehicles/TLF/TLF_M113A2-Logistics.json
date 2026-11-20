@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_M113A2-Logistics",
+  "name": "M113A2 Logistics",
+  "faction": "TLF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

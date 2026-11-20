@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_MTLB-PKT",
+  "name": "MT-LB PKT",
+  "faction": "MEI",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

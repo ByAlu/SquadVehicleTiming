@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_ACV15-MG3",
+  "name": "ACV-15 MG3",
+  "faction": "TLF",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Ural375D-LOG",
+  "name": "Ural-375D Logistics",
+  "faction": "IMF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

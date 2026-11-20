@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_UH60M-M240H",
+  "name": "UH-60M",
+  "faction": "ADF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_PARSIII-Mk19-RWS",
+  "name": "PARS III Mk19 RWS",
+  "faction": "TLF",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

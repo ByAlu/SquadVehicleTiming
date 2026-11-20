@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_Tigr_M_AGS17",
+  "name": "Tigr-M AGS-17",
+  "faction": "RGF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

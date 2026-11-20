@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_Safir-Kornet",
+  "name": "Safir Kornet",
+  "faction": "GFI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

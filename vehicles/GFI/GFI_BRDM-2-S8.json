@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_BRDM-2-S8",
+  "name": "BRDM-2 UB-32",
+  "faction": "GFI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

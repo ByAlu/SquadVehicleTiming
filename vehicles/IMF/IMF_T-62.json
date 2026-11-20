@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_T-62",
+  "name": "T-62",
+  "faction": "IMF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

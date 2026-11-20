@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_Mi8",
+  "name": "Mi-8",
+  "faction": "AFU",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

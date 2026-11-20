@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_M1151_M240",
+  "name": "M1151 M240",
+  "faction": "WPMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

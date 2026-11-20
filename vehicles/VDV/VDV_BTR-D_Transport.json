@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_BTR-D_Transport",
+  "name": "BTR-D",
+  "faction": "VDV",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

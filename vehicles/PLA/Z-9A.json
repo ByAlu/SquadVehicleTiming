@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:Z-9A",
+  "name": "Z-9A",
+  "faction": "PLA",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

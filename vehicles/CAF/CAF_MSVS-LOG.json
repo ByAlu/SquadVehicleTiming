@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_MSVS-LOG",
+  "name": "MSVS Logistics",
+  "faction": "CAF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

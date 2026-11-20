@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_BMP-1TS",
+  "name": "BMP-1TS",
+  "faction": "AFU",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

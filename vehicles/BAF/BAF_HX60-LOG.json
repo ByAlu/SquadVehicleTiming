@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_HX60-LOG",
+  "name": "HX60 Logistics",
+  "faction": "BAF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

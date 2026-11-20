@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_Kamaz_5350_LOG",
+  "name": "KamAZ 5350 Logistics",
+  "faction": "VDV",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_MT-LB-Logi",
+  "name": "MT-LB Logistics",
+  "faction": "IMF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

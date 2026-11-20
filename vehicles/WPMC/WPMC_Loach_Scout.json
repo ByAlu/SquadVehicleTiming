@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_Loach_Scout",
+  "name": "Loach Scout",
+  "faction": "WPMC",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

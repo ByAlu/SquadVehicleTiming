@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_T-72B3",
+  "name": "T-72B3",
+  "faction": "VDV",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

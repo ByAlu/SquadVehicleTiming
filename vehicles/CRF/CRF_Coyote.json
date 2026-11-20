@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CRF/DT_VehicleTable_CRF:CRF_Coyote",
+  "name": "Coyote",
+  "faction": "CRF",
+  "type": "",
+  "assumedSpeedKmh": 45
+}

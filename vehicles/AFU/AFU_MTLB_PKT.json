@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_MTLB_PKT",
+  "name": "MTLB PKT",
+  "faction": "AFU",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

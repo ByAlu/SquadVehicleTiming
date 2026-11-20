@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_LAV25",
+  "name": "LAV-25",
+  "faction": "USMC",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

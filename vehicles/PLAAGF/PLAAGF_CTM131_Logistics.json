@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_CTM131_Logistics",
+  "name": "CTM131 Logistics",
+  "faction": "PLAAGF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

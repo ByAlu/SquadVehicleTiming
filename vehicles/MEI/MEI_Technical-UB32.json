@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_Technical-UB32",
+  "name": "Technical UB-32",
+  "faction": "MEI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

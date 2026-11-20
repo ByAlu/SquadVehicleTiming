@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_M60T",
+  "name": "M60T",
+  "faction": "TLF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

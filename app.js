@@ -2,6 +2,7 @@
 
 const find = (id) => document.getElementById(id);
 const sdk = window.squadSdkData;
+const vehicles = window.squadVehicles;
 const mapSelect = find("map-select");
 const vehicleSelect = find("vehicle-select");
 const widthInput = find("width");
@@ -77,7 +78,7 @@ function updateMapDetail() {
 }
 
 function selectVehicle() {
-  const vehicle = sdk.vehicles[Number(vehicleSelect.value)];
+  const vehicle = vehicles[Number(vehicleSelect.value)];
   find("vehicle-detail").textContent = [vehicle.faction, vehicle.type].filter(Boolean).join(" · ");
   speedInput.value = speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "";
   find("speed-detail").textContent = vehicle.assumedSpeedKmh
@@ -315,17 +316,17 @@ viewport.addEventListener("blur", () => {
   renderRoute();
 });
 
-if (sdk?.maps.length && sdk.vehicles.length) {
+if (sdk?.maps.length && vehicles?.length) {
   find("version").textContent = `SDK ${sdk.version}`;
   for (const map of sdk.maps) mapSelect.add(new Option(map.name, map.name));
   mapSelect.value = sdk.maps.some((map) => map.name === "Yehorivka") ? "Yehorivka" : sdk.maps[0].name;
   const factions = new Map();
   const vehicleLabels = new Map();
-  for (const { faction, name } of sdk.vehicles) {
+  for (const { faction, name } of vehicles) {
     const key = `${faction}/${name}`;
     vehicleLabels.set(key, (vehicleLabels.get(key) ?? 0) + 1);
   }
-  sdk.vehicles.forEach((vehicle, index) => {
+  vehicles.forEach((vehicle, index) => {
     if (!factions.has(vehicle.faction)) {
       const group = document.createElement("optgroup");
       group.label = vehicle.faction;
@@ -346,7 +347,7 @@ if (sdk?.maps.length && sdk.vehicles.length) {
     });
   }
   speedInput.addEventListener("input", () => {
-    speeds.set(sdk.vehicles[Number(vehicleSelect.value)].id, speedInput.value);
+    speeds.set(vehicles[Number(vehicleSelect.value)].id, speedInput.value);
     updateEstimate();
   });
   find("draw").addEventListener("click", () => setMode("draw"));

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_FV510",
+  "name": "FV510",
+  "faction": "BAF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

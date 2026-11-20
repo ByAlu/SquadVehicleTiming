@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_CPV_Transport",
+  "name": "CPV Transport",
+  "faction": "WPMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

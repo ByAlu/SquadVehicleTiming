@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M1151_TOW",
+  "name": "M1151 TOW",
+  "faction": "USMC",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

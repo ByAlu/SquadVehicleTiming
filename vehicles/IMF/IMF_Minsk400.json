@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Minsk400",
+  "name": "Minsk 400",
+  "faction": "IMF",
+  "type": "Bike",
+  "assumedSpeedKmh": 55
+}

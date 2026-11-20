@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_AAVP7A1",
+  "name": "AAVP-7A1",
+  "faction": "USMC",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

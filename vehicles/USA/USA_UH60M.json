@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_UH60M",
+  "name": "UH-60M",
+  "faction": "USA",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

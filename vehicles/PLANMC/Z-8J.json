@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLANMC/DT_VehicleTable_PLANMC:Z-8J",
+  "name": "Z-8J",
+  "faction": "PLANMC",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

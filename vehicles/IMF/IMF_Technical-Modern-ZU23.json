@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Technical-Modern-ZU23",
+  "name": "Modern Technical ZU-23-2",
+  "faction": "IMF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

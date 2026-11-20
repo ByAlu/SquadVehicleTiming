@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_M1151-DSHK",
+  "name": "M1151 Technical DSHK",
+  "faction": "MEI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

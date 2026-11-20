@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:Lynx8x8_Logistics",
+  "name": "Lynx8x8 Logistics",
+  "faction": "PLA",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

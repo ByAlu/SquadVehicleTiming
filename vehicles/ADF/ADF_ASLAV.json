@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_ASLAV",
+  "name": "ASLAV",
+  "faction": "ADF",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

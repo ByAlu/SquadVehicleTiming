@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/TLF/DT_VehicleTable_TLF:TLF_ACV15-25mm",
+  "name": "ACV-15 25mm",
+  "faction": "TLF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

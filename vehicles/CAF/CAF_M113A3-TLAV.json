@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_M113A3-TLAV",
+  "name": "M113A3 TLAV",
+  "faction": "CAF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

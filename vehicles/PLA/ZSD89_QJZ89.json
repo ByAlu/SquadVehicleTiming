@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:ZSD89_QJZ89",
+  "name": "ZSD89 QJZ89",
+  "faction": "PLA",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

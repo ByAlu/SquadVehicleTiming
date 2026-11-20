@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_BTR-D_AGS17",
+  "name": "BTR-D AGS-17",
+  "faction": "VDV",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

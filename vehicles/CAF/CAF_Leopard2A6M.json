@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/CAF/DT_VehicleTable_CAF:CAF_Leopard2A6M",
+  "name": "Leopard 2A6M CAN",
+  "faction": "CAF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

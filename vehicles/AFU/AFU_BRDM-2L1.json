@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_BRDM-2L1",
+  "name": "BRDM-2L1",
+  "faction": "AFU",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLA/DT_VehicleTable_PLA:ZSL92_25mm",
+  "name": "ZSL92 IFV",
+  "faction": "PLA",
+  "type": "Wheeled IFV",
+  "assumedSpeedKmh": 50
+}

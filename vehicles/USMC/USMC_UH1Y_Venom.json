@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_UH1Y_Venom",
+  "name": "UH-1Y CAS",
+  "faction": "USMC",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

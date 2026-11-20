@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_Mi-8",
+  "name": "Mi-8MTV-5",
+  "faction": "RGF",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

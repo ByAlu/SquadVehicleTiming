@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI-Safir-AGS17",
+  "name": "Safir AGS-17",
+  "faction": "GFI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/WPMC/DT_VehicleTable_WPMC:WPMC_M60T",
+  "name": "M60T",
+  "faction": "WPMC",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

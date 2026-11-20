@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_MT-LBM-6MB",
+  "name": "MT-LBM 6MB",
+  "faction": "RGF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

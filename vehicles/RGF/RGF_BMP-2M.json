@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_BMP-2M",
+  "name": "BMP-2M",
+  "faction": "RGF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

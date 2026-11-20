@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_BTR-80",
+  "name": "BTR-80",
+  "faction": "GFI",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

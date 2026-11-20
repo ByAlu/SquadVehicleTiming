@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/GFI/DT_VehicleTable_GFI:GFI_Mi-17",
+  "name": "Mi-17",
+  "faction": "GFI",
+  "type": "Helicopter",
+  "assumedSpeedKmh": 150
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_BTR-80",
+  "name": "BTR-80",
+  "faction": "MEI",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

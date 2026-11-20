@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZSL10_QLZ87",
+  "name": "ZSL10 QLZ87",
+  "faction": "PLAAGF",
+  "type": "Wheeled APC",
+  "assumedSpeedKmh": 50
+}

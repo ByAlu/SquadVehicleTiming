@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_Ural4320-LOG",
+  "name": "Ural-4320 Logistics",
+  "faction": "RGF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

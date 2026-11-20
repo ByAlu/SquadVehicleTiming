@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_FV432_L11A1",
+  "name": "FV432 L11A1",
+  "faction": "BAF",
+  "type": "Light tracked vehicle",
+  "assumedSpeedKmh": 45
+}

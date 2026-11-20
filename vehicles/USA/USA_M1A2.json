@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USA/DT_VehicleTable_USA:USA_M1A2",
+  "name": "M1A2",
+  "faction": "USA",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

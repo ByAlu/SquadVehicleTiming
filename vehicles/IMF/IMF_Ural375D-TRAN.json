@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/IMF/DT_VehicleTable_IMF:IMF_Ural375D-TRAN",
+  "name": "Ural-375D Transport",
+  "faction": "IMF",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

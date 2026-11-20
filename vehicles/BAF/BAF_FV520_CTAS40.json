@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/BAF/DT_VehicleTable_BAF:BAF_FV520_CTAS40",
+  "name": "FV520 CTAS40",
+  "faction": "BAF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

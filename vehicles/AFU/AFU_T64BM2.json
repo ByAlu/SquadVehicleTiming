@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_T64BM2",
+  "name": "T-64BM2",
+  "faction": "AFU",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

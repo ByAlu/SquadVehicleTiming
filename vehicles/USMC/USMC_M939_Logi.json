@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/USMC/DT_VehicleTable_USMC:USMC_M939_Logi",
+  "name": "M939 Logistics",
+  "faction": "USMC",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}

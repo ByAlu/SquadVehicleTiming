@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_ZSD89II_25mm",
+  "name": "ZSD89II IFV",
+  "faction": "PLAAGF",
+  "type": "Tracked IFV",
+  "assumedSpeedKmh": 45
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_Sprut-SDM1",
+  "name": "Sprut-SDM1",
+  "faction": "VDV",
+  "type": "Mobile gun system",
+  "assumedSpeedKmh": 50
+}

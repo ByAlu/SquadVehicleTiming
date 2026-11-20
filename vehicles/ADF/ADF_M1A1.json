@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/ADF/DT_VehicleTable_ADF:ADF_M1A1",
+  "name": "M1A1",
+  "faction": "ADF",
+  "type": "Tank",
+  "assumedSpeedKmh": 40
+}

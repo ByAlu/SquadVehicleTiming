@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/MEI/DT_VehicleTable_MEI:MEI_Technical-SPG9",
+  "name": "Technical SPG-9",
+  "faction": "MEI",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

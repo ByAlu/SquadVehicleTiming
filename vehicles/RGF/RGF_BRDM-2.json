@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_BRDM-2",
+  "name": "BRDM-2",
+  "faction": "RGF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

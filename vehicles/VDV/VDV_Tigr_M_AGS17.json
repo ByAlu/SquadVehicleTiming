@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/VDV/DT_VehicleTable_VDV:VDV_Tigr_M_AGS17",
+  "name": "Tigr-M AGS-17",
+  "faction": "VDV",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

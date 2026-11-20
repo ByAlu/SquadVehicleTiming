@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/RGF/DT_VehicleTable_RGF:RGF_MT-LB-VMK",
+  "name": "MT-LB VMK",
+  "faction": "RGF",
+  "type": "Tracked APC",
+  "assumedSpeedKmh": 45
+}

@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/PLAAGF/DT_VehicleTable_PLAAGF:PLAAGF_CSK131_QJC88_RWS",
+  "name": "CSK131 QJC88 RWS",
+  "faction": "PLAAGF",
+  "type": "Light wheeled vehicle",
+  "assumedSpeedKmh": 55
+}

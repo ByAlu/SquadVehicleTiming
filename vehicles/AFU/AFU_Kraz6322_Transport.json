@@ -1,0 +1,7 @@
+{
+  "id": "/Game/Settings/Vehicle/AFU/DT_VehicleTable_AFU:AFU_Kraz6322_Transport",
+  "name": "KrAZ-6322 Transport",
+  "faction": "AFU",
+  "type": "Truck",
+  "assumedSpeedKmh": 50
+}
