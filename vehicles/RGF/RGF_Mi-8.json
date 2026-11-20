@@ -3,5 +3,15 @@
   "name": "Mi-8MTV-5",
   "faction": "RGF",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/MI8/BP_MI8.BP_MI8_C"
+        ]
+      }
+    ]
+  }
 }

@@ -3,5 +3,105 @@
   "name": "ZSD89 QLZ87",
   "faction": "PLA",
   "type": "Light tracked vehicle",
-  "assumedSpeedKmh": 45
+  "assumedSpeedKmh": 45,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/ZSD89/BP_ZSD89_QLZ-87.BP_ZSD89_QLZ-87_C",
+          "/Game/Vehicles/ZSD89/BP_ZSD89_QLZ-87_Desert.BP_ZSD89_QLZ-87_Desert_C"
+        ],
+        "movementClass": "SQTrackedVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/ZSD89/Config/BP_ZSD89_VehicleConfigTracked.BP_ZSD89_VehicleConfigTracked",
+        "configClass": "ODKTrackedVehicleConfigAssetNew",
+        "body": {
+          "mass": 14000.0,
+          "width": 280.0,
+          "height": 160.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 10.0,
+          "slope_braking_factor": 0.5,
+          "slope_boost_factor": 5.0,
+          "slope_boost_min_speed": 10.0,
+          "slope_boost_max_speed": 40.0,
+          "slope_boost_min_angle": 8.0,
+          "slope_boost_max_angle": 47.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 2600.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.699999988079071,
+          "rev_up_rate_locked": 5.0,
+          "rev_up_rate_unlocked": 5.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,Time=2499.981201,Value=2600.000000,ArriveTangent=-2.402737),(InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=2524.930908,Value=2116.792725,ArriveTangent=-43.275276,LeaveTangent=-43.280506),(InterpMode=RCIM_Cubic,Time=2552.205811,Value=916.458496)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 5.199999809265137,
+          "automatic_transmission": true,
+          "clutch_strength": 25.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.30000001192092896,
+          "gear_auto_box_latency": 0.699999988079071,
+          "forward_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 2.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 3.200000047683716,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "tracks": {
+          "sprocket_radius": 35.0,
+          "sprocket_mass": 85.0,
+          "track_mass": 800.0,
+          "rolling_resistance": 0.5,
+          "brake_torque": 12000.0,
+          "handbrake_torque": 35000.0,
+          "friction_multiplier": 3.200000047683716
+        },
+        "noSlipRpmLimitKmh": {
+          "forward": 65.97,
+          "reverse": 20.62
+        }
+      }
+    ]
+  }
 }

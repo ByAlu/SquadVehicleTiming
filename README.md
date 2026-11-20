@@ -20,6 +20,17 @@ After editing vehicle JSON files, rebuild the browser catalog with `python tools
 
 The exporter writes minimap world dimensions to `sdk-data.js` using the gameplay layers' `MinimapCornersPosition` property. A map without a readable scale asks for its full image width and height in meters. You can also override a supplied scale under **Map scale**.
 
+## Vehicle physics data
+
+Look for `sdkPhysics` in the individual vehicle JSON files. The exporter follows the SDK's vehicle settings to each Blueprint variant and reads its assigned movement configuration. Variants that share the same configuration are grouped. Each profile names its source Blueprint and, where available, its configuration asset.
+
+- `body` includes configured mass in kg, aerodynamic coefficients, and slope-assist settings.
+- `engine` includes RPM limits, the torque setting, engine rev rates, braking effect, and the torque curve. Inline curves use Unreal's struct text format, which retains the curve keys and interpolation settings. External curves name the SDK asset.
+- `transmission`, `wheels`, and `tracks` record gearing, shift settings, radii in centimeters, and available braking and friction settings.
+- `noSlipRpmLimitKmh` is a calculated forward or reverse speed at the engine's RPM limit, using the gearing and wheel or sprocket radius. It assumes no slip and enough power to reach the RPM limit. It is provided for ground movement where those inputs are available.
+
+The SDK vehicle stats table has no rows in v10.6.1. Measured acceleration from rest, achievable top speed, and braking distance require a running vehicle under specified surface, slope, and driving conditions. A profile with only a Blueprint or movement class indicates that the extractor could link the variant but could not read a compatible motion configuration.
+
 ## How the estimate works
 
 Route distance is the sum of the horizontal distances between consecutive points, using separate scales for the minimap's width and height. Travel time is that distance divided by the average route speed. The starting speed is a heuristic based on the SDK vehicle icon category. It can be replaced with a speed measured in-game. The route calculation uses the drawn line and does not simulate acceleration, terrain, or obstacles.

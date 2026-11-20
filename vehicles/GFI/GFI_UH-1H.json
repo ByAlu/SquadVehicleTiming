@@ -3,5 +3,15 @@
   "name": "UH-1H MG3",
   "faction": "GFI",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/UH1H/BP_UH1H_GFI.BP_UH1H_GFI_C"
+        ]
+      }
+    ]
+  }
 }

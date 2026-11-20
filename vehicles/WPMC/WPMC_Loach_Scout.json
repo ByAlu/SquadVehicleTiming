@@ -3,5 +3,15 @@
   "name": "Loach Scout",
   "faction": "WPMC",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Loach_WPMC/BP_Loach.BP_Loach_C"
+        ]
+      }
+    ]
+  }
 }

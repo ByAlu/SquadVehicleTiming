@@ -3,5 +3,15 @@
   "name": "MRH-90",
   "faction": "ADF",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/MRH90/BP_MRH90_Mag58.BP_MRH90_Mag58_C"
+        ]
+      }
+    ]
+  }
 }

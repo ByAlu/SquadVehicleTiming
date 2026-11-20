@@ -3,5 +3,15 @@
   "name": "Z-9A",
   "faction": "PLAAGF",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Z9A/BP_Z9A.BP_Z9A_C"
+        ]
+      }
+    ]
+  }
 }

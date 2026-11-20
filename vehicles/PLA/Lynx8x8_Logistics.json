@@ -3,5 +3,98 @@
   "name": "Lynx8x8 Logistics",
   "faction": "PLA",
   "type": "Light wheeled vehicle",
-  "assumedSpeedKmh": 55
+  "assumedSpeedKmh": 55,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Lynx_8x8/BP_LynxATV_Logistic.BP_LynxATV_Logistic_C"
+        ],
+        "movementClass": "SQTrackedVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/Lynx_8x8/Configs/BP_LynxATV_VehicleConfigTracked.BP_LynxATV_VehicleConfigTracked",
+        "configClass": "ODKTrackedVehicleConfigAssetNew",
+        "body": {
+          "mass": 2400.0,
+          "width": 170.0,
+          "height": 110.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 23.0,
+          "slope_braking_factor": 0.5,
+          "slope_boost_factor": 5.0,
+          "slope_boost_min_speed": 5.0,
+          "slope_boost_max_speed": 40.0,
+          "slope_boost_min_angle": 15.0,
+          "slope_boost_max_angle": 45.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 4000.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.10000000149011612,
+          "rev_up_rate_locked": 5.0,
+          "rev_up_rate_unlocked": 5.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((Time=3898.997070,Value=251.022888),(Time=4000.000000)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 4.599999904632568,
+          "automatic_transmission": true,
+          "clutch_strength": 30.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.6000000238418579,
+          "gear_auto_box_latency": 0.5,
+          "forward_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 2.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "tracks": {
+          "sprocket_radius": 30.0,
+          "sprocket_mass": 5.0,
+          "track_mass": 50.0,
+          "rolling_resistance": 0.41999998688697815,
+          "brake_torque": 4200.0,
+          "handbrake_torque": 5666.0,
+          "friction_multiplier": 3.299999952316284
+        },
+        "noSlipRpmLimitKmh": {
+          "forward": 98.35,
+          "reverse": 19.67
+        }
+      }
+    ]
+  }
 }

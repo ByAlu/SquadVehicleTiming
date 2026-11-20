@@ -3,5 +3,143 @@
   "name": "PMV RWS M2",
   "faction": "ADF",
   "type": "Light wheeled vehicle",
-  "assumedSpeedKmh": 55
+  "assumedSpeedKmh": 55,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/PMV/BP_PMV_RWS.BP_PMV_RWS_C"
+        ],
+        "movementClass": "SQWheeledVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/PMV/Configs/BP_PMV_VehicleConfig.BP_PMV_VehicleConfig",
+        "configClass": "ODKWheeledVehicleConfigAsset",
+        "body": {
+          "mass": 12000.0,
+          "width": 248.0,
+          "height": 265.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 20.0,
+          "slope_braking_factor": 0.25,
+          "slope_boost_factor": 1.7000000476837158,
+          "slope_boost_min_speed": 21.0,
+          "slope_boost_max_speed": 30.0,
+          "slope_boost_min_angle": 15.0,
+          "slope_boost_max_angle": 39.0
+        },
+        "engine": {
+          "idle_rpm": 100.0,
+          "max_rpm": 2700.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.5,
+          "rev_up_rate_locked": 4.0,
+          "rev_up_rate_unlocked": 10.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=2600.000000,Value=2000.000000,ArriveTangent=-0.257618,LeaveTangent=-0.257617),(InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=2700.000000,ArriveTangent=-1.421289,LeaveTangent=-1.421693)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 6.0,
+          "automatic_transmission": true,
+          "clutch_strength": 25.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.20000000298023224,
+          "gear_auto_box_latency": 0.23999999463558197,
+          "forward_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 0.699999988079071,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 2.200000047683716,
+              "change_up_ratio": 0.699999988079071,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.600000023841858,
+              "change_up_ratio": 0.699999988079071,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.399999976158142,
+              "change_up_ratio": 0.699999988079071,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.699999988079071,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0499999523162842,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 3.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "wheels": [
+          {
+            "wheel_radius": 62.0,
+            "wheel_mass": 40.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 12894.0,
+            "max_handbrake_torque": 27788.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 45.0,
+            "bone_name": "Wheel_L1"
+          },
+          {
+            "wheel_radius": 62.0,
+            "wheel_mass": 40.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 12894.0,
+            "max_handbrake_torque": 27788.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 45.0,
+            "bone_name": "Wheel_R1"
+          },
+          {
+            "wheel_radius": 62.0,
+            "wheel_mass": 40.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 12894.0,
+            "max_handbrake_torque": 27788.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 0.0,
+            "bone_name": "Wheel_L2"
+          },
+          {
+            "wheel_radius": 62.0,
+            "wheel_mass": 40.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 12894.0,
+            "max_handbrake_torque": 27788.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 0.0,
+            "bone_name": "Wheel_R2"
+          }
+        ],
+        "noSlipRpmLimitKmh": {
+          "forward": 100.17,
+          "reverse": 30.05
+        }
+      }
+    ]
+  }
 }

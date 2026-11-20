@@ -3,5 +3,15 @@
   "name": "UH60 PKM",
   "faction": "TLF",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/UH60M/BP_UH60_TLF_PKM.BP_UH60_TLF_PKM_C"
+        ]
+      }
+    ]
+  }
 }

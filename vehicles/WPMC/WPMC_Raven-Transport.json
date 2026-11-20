@@ -3,5 +3,15 @@
   "name": "Raven Transport",
   "faction": "WPMC",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/CH146_Raven_WPMC/BP_CH146_Raven.BP_CH146_Raven_C"
+        ]
+      }
+    ]
+  }
 }

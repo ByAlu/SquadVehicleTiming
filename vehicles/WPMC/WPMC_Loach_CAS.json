@@ -3,5 +3,15 @@
   "name": "Loach CAS",
   "faction": "WPMC",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Loach_CAS_WPMC/BP_Loach_CAS.BP_Loach_CAS_C"
+        ]
+      }
+    ]
+  }
 }

@@ -3,5 +3,105 @@
   "name": "BMP-2",
   "faction": "RGF",
   "type": "Tracked IFV",
-  "assumedSpeedKmh": 45
+  "assumedSpeedKmh": 45,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/BMP-2/BP_BMP2.BP_BMP2_C",
+          "/Game/Vehicles/BMP-2/BP_BMP2_Desert.BP_BMP2_Desert_C"
+        ],
+        "movementClass": "SQTrackedVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/BMP-2/Configs/BP_BMP2_VehiceConfigTracked.BP_BMP2_VehiceConfigTracked",
+        "configClass": "ODKTrackedVehicleConfigAssetNew",
+        "body": {
+          "mass": 15000.0,
+          "width": 280.0,
+          "height": 160.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 69.0,
+          "slope_braking_factor": 0.699999988079071,
+          "slope_boost_factor": 15.0,
+          "slope_boost_min_speed": 16.0,
+          "slope_boost_max_speed": 40.0,
+          "slope_boost_min_angle": 10.0,
+          "slope_boost_max_angle": 47.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 2600.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.699999988079071,
+          "rev_up_rate_locked": 5.0,
+          "rev_up_rate_unlocked": 5.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,Time=2500.000000,Value=1514.339844,ArriveTangent=-2.402737),(InterpMode=RCIM_Cubic,Time=2549.683105,Value=2350.736816)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 5.199999809265137,
+          "automatic_transmission": true,
+          "clutch_strength": 25.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.30000001192092896,
+          "gear_auto_box_latency": 0.699999988079071,
+          "forward_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 2.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 3.200000047683716,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "tracks": {
+          "sprocket_radius": 35.0,
+          "sprocket_mass": 90.0,
+          "track_mass": 850.0,
+          "rolling_resistance": 0.5,
+          "brake_torque": 12000.0,
+          "handbrake_torque": 24000.0,
+          "friction_multiplier": 3.0
+        },
+        "noSlipRpmLimitKmh": {
+          "forward": 65.97,
+          "reverse": 20.62
+        }
+      }
+    ]
+  }
 }

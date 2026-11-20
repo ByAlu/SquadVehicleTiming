@@ -4,6 +4,7 @@ import ast
 import json
 from pathlib import Path
 import re
+import runpy
 import sys
 from tempfile import NamedTemporaryFile
 
@@ -106,10 +107,12 @@ def get_vehicles():
                 "assumedSpeedKmh": speed,
             })
     distinct = {}
+    row_ids = {}
     for vehicle in sorted(vehicles, key=lambda item: item["id"]):
         key = (vehicle["faction"], vehicle["name"].casefold(), vehicle["type"])
-        distinct.setdefault(key, vehicle)
-    return [distinct[key] for key in sorted(distinct)]
+        canonical = distinct.setdefault(key, vehicle)
+        row_ids[vehicle["id"]] = canonical["id"]
+    return [distinct[key] for key in sorted(distinct)], row_ids
 
 
 def get_map(name):
@@ -184,6 +187,8 @@ def build_vehicle_catalog():
     if not vehicles:
         raise RuntimeError("No vehicle JSON files were found.")
     vehicles.sort(key=lambda vehicle: (vehicle["faction"], vehicle["name"].casefold(), vehicle["type"]))
+    for vehicle in vehicles:
+        vehicle.pop("sdkPhysics", None)
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"
@@ -203,7 +208,7 @@ def write_map_data(version, maps):
 
 
 def main():
-    vehicles = get_vehicles()
+    vehicles, row_ids = get_vehicles()
     if not vehicles:
         raise RuntimeError("No vehicle settings were found in the Squad SDK.")
     unreal.log(f"Route Planner: exported {len(vehicles)} vehicle entries.")
@@ -217,6 +222,8 @@ def main():
         unreal.log(f"Route Planner: {result}")
     project = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir()))
     version = (project / "version.txt").read_text(encoding="utf-8").strip()
+    physics = runpy.run_path(str(Path(__file__).with_name("vehicle_physics.py")))
+    physics["enrich"](vehicles, row_ids, VEHICLE_SETTINGS, version)
     write_vehicle_files(vehicles)
     catalog = build_vehicle_catalog()
     maps_file = write_map_data(version, maps)

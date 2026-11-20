@@ -3,5 +3,104 @@
   "name": "ZTD05",
   "faction": "PLANMC",
   "type": "Mobile gun system",
-  "assumedSpeedKmh": 50
+  "assumedSpeedKmh": 50,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/ZTD05/BP_ZTD05.BP_ZTD05_C"
+        ],
+        "movementClass": "SQTrackedVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/ZBD05/Configs/BP_ZBD05_VehicleConfig_Tracked.BP_ZBD05_VehicleConfig_Tracked",
+        "configClass": "ODKTrackedVehicleConfigAssetNew",
+        "body": {
+          "mass": 22000.0,
+          "width": 336.0,
+          "height": 304.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 69.0,
+          "slope_braking_factor": 0.800000011920929,
+          "slope_boost_factor": 20.0,
+          "slope_boost_min_speed": 15.0,
+          "slope_boost_max_speed": 30.0,
+          "slope_boost_min_angle": 10.0,
+          "slope_boost_max_angle": 45.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 2800.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.5,
+          "rev_up_rate_locked": 5.0,
+          "rev_up_rate_unlocked": 5.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,TangentMode=RCTM_SmartAuto,Time=2700.000000,Value=300.000000,ArriveTangent=-2.402737,LeaveTangent=-2.404144),(Time=2800.000000)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 5.5,
+          "automatic_transmission": true,
+          "clutch_strength": 25.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.30000001192092896,
+          "gear_auto_box_latency": 0.30000001192092896,
+          "forward_gear_ratios": [
+            {
+              "ratio": 5.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 4.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.399999976158142,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 3.299999952316284,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.4000000059604645,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "tracks": {
+          "sprocket_radius": 37.0,
+          "sprocket_mass": 100.0,
+          "track_mass": 1100.0,
+          "rolling_resistance": 0.5,
+          "brake_torque": 20000.0,
+          "handbrake_torque": 40000.0,
+          "friction_multiplier": 3.299999952316284
+        },
+        "noSlipRpmLimitKmh": {
+          "forward": 71.01,
+          "reverse": 21.52
+        }
+      }
+    ]
+  }
 }

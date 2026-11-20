@@ -3,5 +3,99 @@
   "name": "M113A2T M2",
   "faction": "TLF",
   "type": "Light tracked vehicle",
-  "assumedSpeedKmh": 45
+  "assumedSpeedKmh": 45,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/M113A2T_TLF/BP_M113A2T_M2_TLF.BP_M113A2T_M2_TLF_C",
+          "/Game/Vehicles/M113A2T_TLF/BP_M113A2T_M2_TLF_Desert.BP_M113A2T_M2_TLF_Desert_C"
+        ],
+        "movementClass": "SQTrackedVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/M1064A3/Config/BP_M1064_VehicleConfig_Tracked.BP_M1064_VehicleConfig_Tracked",
+        "configClass": "ODKTrackedVehicleConfigAssetNew",
+        "body": {
+          "mass": 15000.0,
+          "width": 260.0,
+          "height": 220.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 52.0,
+          "slope_braking_factor": 0.75,
+          "slope_boost_factor": 12.0,
+          "slope_boost_min_speed": 11.0,
+          "slope_boost_max_speed": 24.0,
+          "slope_boost_min_angle": 25.0,
+          "slope_boost_max_angle": 47.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 2800.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.8700000047683716,
+          "rev_up_rate_locked": 5.0,
+          "rev_up_rate_unlocked": 5.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=2700.000000,Value=300.000000,ArriveTangent=-0.074252,LeaveTangent=0.031443),(InterpMode=RCIM_Cubic,Time=2800.000000,Value=1.000000)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 5.5,
+          "automatic_transmission": true,
+          "clutch_strength": 20.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.4000000059604645,
+          "gear_auto_box_latency": 1.0,
+          "forward_gear_ratios": [
+            {
+              "ratio": 4.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.399999976158142,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 3.0999999046325684,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.3499999940395355,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "tracks": {
+          "sprocket_radius": 34.0,
+          "sprocket_mass": 75.0,
+          "track_mass": 750.0,
+          "rolling_resistance": 0.5,
+          "brake_torque": 9000.0,
+          "handbrake_torque": 12000.0,
+          "friction_multiplier": 3.0
+        },
+        "noSlipRpmLimitKmh": {
+          "forward": 65.25,
+          "reverse": 21.05
+        }
+      }
+    ]
+  }
 }

@@ -3,5 +3,15 @@
   "name": "UH-1Y CAS",
   "faction": "USMC",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/UH1Y/BP_UH1Y_CAS.BP_UH1Y_CAS_C"
+        ]
+      }
+    ]
+  }
 }

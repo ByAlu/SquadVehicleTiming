@@ -3,5 +3,138 @@
   "name": "M1151 CROWS M2",
   "faction": "USMC",
   "type": "Light wheeled vehicle",
-  "assumedSpeedKmh": 55
+  "assumedSpeedKmh": 55,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/M1151/BP_M1151_CROWS.BP_M1151_CROWS_C",
+          "/Game/Vehicles/M1151/BP_M1151_CROWS_Woodland.BP_M1151_CROWS_Woodland_C"
+        ],
+        "movementClass": "SQWheeledVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/M1151/Configs/BP_M1151_VehicleConfig.BP_M1151_VehicleConfig",
+        "configClass": "ODKWheeledVehicleConfigAsset",
+        "body": {
+          "mass": 7300.0,
+          "width": 234.0,
+          "height": 180.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 1.0,
+          "slope_braking_factor": 0.25,
+          "slope_boost_factor": 0.5,
+          "slope_boost_min_speed": 1.0,
+          "slope_boost_max_speed": 60.0,
+          "slope_boost_min_angle": 15.0,
+          "slope_boost_max_angle": 40.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 3000.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.5,
+          "rev_up_rate_locked": 1.5,
+          "rev_up_rate_unlocked": 3.0,
+          "rev_down_rate_unlocked": 600.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=2900.000000,Value=1000.000000,ArriveTangent=-0.165988,LeaveTangent=-0.165970),(InterpMode=RCIM_Cubic,TangentMode=RCTM_User,Time=3000.000000,ArriveTangent=-0.795222,LeaveTangent=-0.795222)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 4.300000190734863,
+          "automatic_transmission": true,
+          "clutch_strength": 25.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.25,
+          "gear_auto_box_latency": 0.5,
+          "forward_gear_ratios": [
+            {
+              "ratio": 6.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 3.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.600000023841858,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.2000000476837158,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": -4.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            }
+          ]
+        },
+        "wheels": [
+          {
+            "wheel_radius": 50.0,
+            "wheel_mass": 30.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 10652.0,
+            "max_handbrake_torque": 27304.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 35.0,
+            "bone_name": "Wheel_L1"
+          },
+          {
+            "wheel_radius": 50.0,
+            "wheel_mass": 30.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 10652.0,
+            "max_handbrake_torque": 27304.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 35.0,
+            "bone_name": "Wheel_R1"
+          },
+          {
+            "wheel_radius": 50.0,
+            "wheel_mass": 30.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 10652.0,
+            "max_handbrake_torque": 27304.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 0.0,
+            "bone_name": "Wheel_L2"
+          },
+          {
+            "wheel_radius": 50.0,
+            "wheel_mass": 30.0,
+            "friction_multiplier": 2.0999999046325684,
+            "max_brake_torque": 10652.0,
+            "max_handbrake_torque": 27304.0,
+            "torque_ratio": 0.25,
+            "max_steering_angle": 0.0,
+            "bone_name": "Wheel_R2"
+          }
+        ],
+        "noSlipRpmLimitKmh": {
+          "forward": 131.51,
+          "reverse": 32.88
+        }
+      }
+    ]
+  }
 }

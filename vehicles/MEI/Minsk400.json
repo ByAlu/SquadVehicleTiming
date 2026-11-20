@@ -3,5 +3,140 @@
   "name": "Minsk 400",
   "faction": "MEI",
   "type": "Bike",
-  "assumedSpeedKmh": 55
+  "assumedSpeedKmh": 55,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Minsk_motorbike/BP_Minsk_black.BP_Minsk_black_C",
+          "/Game/Vehicles/Minsk_motorbike/BP_Minsk_blue.BP_Minsk_blue_C",
+          "/Game/Vehicles/Minsk_motorbike/BP_Minsk_green.BP_Minsk_green_C",
+          "/Game/Vehicles/Minsk_motorbike/BP_minsk.BP_minsk_C"
+        ],
+        "movementClass": "SQWheeledVehicleMovementComponent",
+        "configAsset": "/Game/Vehicles/Minsk_motorbike/Configs/BP_minsk_VehicleConfig.BP_minsk_VehicleConfig",
+        "configClass": "ODKWheeledVehicleConfigAsset",
+        "body": {
+          "mass": 150.0,
+          "width": 20.0,
+          "height": 150.0,
+          "drag_coefficient": 1.0,
+          "downforce_coefficient": 1.0,
+          "slope_braking_factor": 0.5,
+          "slope_boost_factor": 0.0,
+          "slope_boost_min_speed": 5.0,
+          "slope_boost_max_speed": 40.0,
+          "slope_boost_min_angle": 15.0,
+          "slope_boost_max_angle": 45.0
+        },
+        "engine": {
+          "idle_rpm": 200.0,
+          "max_rpm": 1600.0,
+          "max_torque": 1.0,
+          "engine_braking_effect": 0.009999999776482582,
+          "rev_up_rate_locked": 4.0,
+          "rev_up_rate_unlocked": 4.0,
+          "rev_down_rate_unlocked": 1.0,
+          "torque_curve": {
+            "unrealText": "(EditorCurveData=(Keys=((Value=200.000000),(Time=1600.000000)),DefaultValue=340282346638528859811704183484516925440.000000,PreInfinityExtrap=RCCE_Constant,PostInfinityExtrap=RCCE_Constant),ExternalCurve=None)"
+          }
+        },
+        "transmission": {
+          "final_drive_ratio": 2.0999999046325684,
+          "automatic_transmission": true,
+          "clutch_strength": 1.0,
+          "use_speed_for_shifting": false,
+          "gear_switch_time": 0.5,
+          "gear_auto_box_latency": 1.0,
+          "forward_gear_ratios": [
+            {
+              "ratio": 4.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 2.0,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.5,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 0.0
+            },
+            {
+              "ratio": 1.0,
+              "change_up_ratio": 1.0,
+              "change_down_ratio": 0.3400000035762787,
+              "rpm_governor": 0.0
+            }
+          ],
+          "reverse_gear_ratios": [
+            {
+              "ratio": 9.989999771118164,
+              "change_up_ratio": 0.8999999761581421,
+              "change_down_ratio": 0.30000001192092896,
+              "rpm_governor": 5000.0
+            }
+          ]
+        },
+        "wheels": [
+          {
+            "wheel_radius": 43.0,
+            "wheel_mass": 8.0,
+            "friction_multiplier": 10.0,
+            "max_brake_torque": 200.0,
+            "max_handbrake_torque": 700.0,
+            "torque_ratio": 0.5,
+            "max_steering_angle": 40.0,
+            "bone_name": "stabiliserwheel_L1"
+          },
+          {
+            "wheel_radius": 43.0,
+            "wheel_mass": 8.0,
+            "friction_multiplier": 10.0,
+            "max_brake_torque": 200.0,
+            "max_handbrake_torque": 700.0,
+            "torque_ratio": 0.5,
+            "max_steering_angle": 0.0,
+            "bone_name": "stabiliserwheel_R1"
+          },
+          {
+            "wheel_radius": 43.0,
+            "wheel_mass": 8.0,
+            "friction_multiplier": 20.0,
+            "max_brake_torque": 200.0,
+            "max_handbrake_torque": 700.0,
+            "torque_ratio": 0.5,
+            "max_steering_angle": 0.0,
+            "bone_name": "stabiliserwheel_L2"
+          },
+          {
+            "wheel_radius": 43.0,
+            "wheel_mass": 8.0,
+            "friction_multiplier": 20.0,
+            "max_brake_torque": 200.0,
+            "max_handbrake_torque": 700.0,
+            "torque_ratio": 0.5,
+            "max_steering_angle": 0.0,
+            "bone_name": "stabiliserwheel_R2"
+          },
+          {
+            "wheel_radius": 50.0,
+            "wheel_mass": 8.0,
+            "friction_multiplier": 20.0,
+            "max_brake_torque": 200.0,
+            "max_handbrake_torque": 700.0,
+            "torque_ratio": 0.5,
+            "max_steering_angle": 40.0,
+            "bone_name": "guide_wheel_front"
+          }
+        ]
+      }
+    ]
+  }
 }

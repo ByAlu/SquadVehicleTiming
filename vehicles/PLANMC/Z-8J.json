@@ -3,5 +3,15 @@
   "name": "Z-8J",
   "faction": "PLANMC",
   "type": "Helicopter",
-  "assumedSpeedKmh": 150
+  "assumedSpeedKmh": 150,
+  "sdkPhysics": {
+    "sdkVersion": "v10.6.1",
+    "variants": [
+      {
+        "blueprints": [
+          "/Game/Vehicles/Z8J/BP_Z8J.BP_Z8J_C"
+        ]
+      }
+    ]
+  }
 }
