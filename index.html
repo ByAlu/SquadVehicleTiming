@@ -10,6 +10,7 @@
   <script src="vehicles/catalog.js" defer></script>
   <script src="route.js" defer></script>
   <script src="driving.js" defer></script>
+  <script src="terrain.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -24,6 +25,8 @@
         <h1 id="estimate-label">Estimated travel time</h1>
         <output class="time" id="time" aria-live="polite">—</output>
         <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
+        <div class="distance"><span>Estimated average speed</span><output id="average-speed">—</output></div>
+        <p class="detail terrain-detail" id="terrain-detail" hidden></p>
       </section>
       <section class="settings" aria-label="Map and vehicle">
         <label for="map-select">Map</label>

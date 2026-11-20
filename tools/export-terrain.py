@@ -13,6 +13,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = runpy.run_path(str(Path(__file__).with_name("export-sdk.py")))
+BUILD_GRID = runpy.run_path(str(Path(__file__).with_name("build-terrain.py")))["build_grid"]
 
 
 def surface_names(project):
@@ -199,6 +200,7 @@ def export_map(entry, spacing_m, names, version):
     }
     output = ROOT / "maps" / name / "terrain.json"
     write_grid(output, metadata, rows)
+    BUILD_GRID(output)
     unreal.log(f"Squad terrain: wrote {output}: {sampled}/{rows_count * cols_count} samples, {len(surfaces)} surfaces.")
 
 

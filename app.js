@@ -35,11 +35,19 @@ let mapTop = 0;
 let drawnWidth = 0;
 let drawnHeight = 0;
 let activeDrivingModel = null;
+let activeGroundVehicle = false;
+let activeTrackedVehicle = false;
+let terrainGrid = null;
+let routeTerrain = null;
+let terrainStatus = "unavailable";
 
 function selectMap() {
   finishGesture();
-  clearRoute();
   const map = sdk.maps[mapSelect.selectedIndex];
+  const request = ++loadId;
+  terrainGrid = null;
+  terrainStatus = map.sourceLayer ? "loading" : "unavailable";
+  clearRoute();
   const scale = scales.get(map.name) ?? [map.widthMeters ?? "", map.heightMeters ?? ""];
   [widthInput.value, heightInput.value] = scale;
   find("calibration").open = !map.widthMeters;
@@ -53,7 +61,6 @@ function selectMap() {
   updateButtons();
   mapMessage.hidden = false;
   mapMessage.textContent = "Loading minimap…";
-  const request = ++loadId;
   const src = `maps/${encodeURIComponent(map.name)}/minimap.webp`;
   const incoming = new Image();
   incoming.onload = () => {
@@ -69,6 +76,18 @@ function selectMap() {
     if (request === loadId) mapMessage.textContent = "The minimap image could not be loaded.";
   };
   incoming.src = src;
+  if (map.sourceLayer) {
+    Terrain.load(map).then((grid) => {
+      if (request !== loadId) return;
+      terrainGrid = grid;
+      terrainStatus = "ready";
+      updateEstimate();
+    }).catch(() => {
+      if (request !== loadId) return;
+      terrainStatus = "unavailable";
+      updateEstimate();
+    });
+  }
 }
 
 function updateMapDetail() {
@@ -100,12 +119,15 @@ function selectConfiguration() {
   const vehicle = vehicles[Number(vehicleSelect.value)];
   const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
   activeDrivingModel = profile ? drivingModels.get(profile) : null;
-  find("speed-label").textContent = activeDrivingModel ? "Speed limit (optional)" : "Average route speed";
+  activeGroundVehicle = vehicle.type !== "Helicopter" && vehicle.type !== "Boat";
+  activeTrackedVehicle = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
+  find("speed-label").textContent = activeDrivingModel ? "Speed limit (optional)" :
+    activeGroundVehicle ? "Average speed on firm, flat ground" : "Average route speed";
   speedInput.placeholder = activeDrivingModel ? "Automatic" : "";
   speedInput.value = speeds.get(vehicle.id) ?? (activeDrivingModel ? "" : vehicle.assumedSpeedKmh ?? "");
   find("speed-detail").textContent = activeDrivingModel
-    ? `SDK gearing limit ${numeric.format(profile.speedLimitKmh)} km/h. Flat ground, from rest to rest.`
-    : "Average-speed estimate. Adjust the speed for your route conditions.";
+    ? `SDK gearing limit ${numeric.format(profile.speedLimitKmh)} km/h. Starts and stops at rest.`
+    : "Average-speed estimate.";
   updateEstimate();
 }
 
@@ -114,18 +136,39 @@ function updateEstimate() {
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
   const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(route, width, height) : 0;
+  const useTerrain = activeGroundVehicle && terrainGrid && distance > 0;
+  if (useTerrain && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
+  const terrain = useTerrain ? routeTerrain : null;
+  const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
   let seconds = 0;
   if (speedInput.validity.valid) {
     if (activeDrivingModel) {
-      seconds = Driving.travelSeconds(distance, activeDrivingModel, speedInput.value === "" ? Infinity : speed);
+      const cap = speedInput.value === "" ? Infinity : speed;
+      seconds = conditions
+        ? Driving.travelTerrainSeconds(conditions, activeDrivingModel, cap)
+        : Driving.travelSeconds(distance, activeDrivingModel, cap);
     } else if (speed >= 0.1) {
-      seconds = RouteMath.travelSeconds(distance, speed);
+      seconds = conditions
+        ? conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0)
+        : RouteMath.travelSeconds(distance, speed);
     }
   }
   find("distance").textContent = distance > 0
     ? distance >= 1000 ? `${numeric.format(distance / 1000)} km` : `${numeric.format(distance)} m`
     : "—";
-  find("time").textContent = seconds > 0 && Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
+  const hasEstimate = seconds > 0 && Number.isFinite(seconds);
+  find("time").textContent = hasEstimate ? RouteMath.formatTime(seconds) : "—";
+  find("average-speed").textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h` : "—";
+
+  const terrainDetail = find("terrain-detail");
+  if (activeGroundVehicle && terrain) {
+    const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
+    const water = terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
+    terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
+  } else {
+    terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
+  }
+  terrainDetail.hidden = !activeGroundVehicle || (!terrain && terrainStatus === "ready");
 }
 
 function updateButtons() {
@@ -163,6 +206,7 @@ function renderRoute() {
 }
 
 function routeChanged() {
+  routeTerrain = null;
   find("route-status").textContent = route.length > 1 ? "Add another point to extend the route." :
     route.length ? "Add an end point." : "Add a start point.";
   renderRoute();
@@ -375,6 +419,7 @@ if (sdk?.maps.length && vehicles?.length) {
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
+      routeTerrain = null;
       updateMapDetail();
       updateEstimate();
     });

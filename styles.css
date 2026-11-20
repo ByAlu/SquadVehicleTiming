@@ -63,6 +63,7 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
 }
 .distance { display: flex; align-items: center; justify-content: space-between; gap: .5rem; color: var(--muted); font-size: .9rem; }
 .distance output { color: #f2f4ed; font-variant-numeric: tabular-nums; }
+.distance + .distance, .estimate .terrain-detail { margin-top: .5rem; }
 .settings { display: grid; gap: .5rem; }
 .settings > label { margin-top: .55rem; font-size: .93rem; font-weight: 650; }
 input, select {

@@ -4,7 +4,7 @@ Open `index.html` in a browser. The planner runs locally using the bundled SDK c
 
 1. Choose a map and a vehicle. The vehicle list is grouped by faction.
 2. Click the minimap to add waypoints or drag to trace a route. Undo removes the last click or drag. Pan and the zoom controls help with detailed routes.
-3. The estimate updates as you draw or change vehicles. Where SDK driving data is available, choose a vehicle configuration if prompted and optionally set a **Speed limit**. Vehicles without a usable driving profile use the editable **Average route speed**.
+3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted and optionally set a **Speed limit**. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 
 ## Refresh the SDK data
 
@@ -49,12 +49,16 @@ A `null` cell means the vehicle collision trace found no blocking surface. The s
 
 `materialSource` records how the physical material was resolved. A trace result or a collision override identifies the material directly. A mesh material or landscape default is a fallback. An unknown surface still carries elevation and grade when its collision was sampled.
 
+The exporter also builds each map's compressed browser bundle. After editing the JSON grids, run `python tools/build-terrain.py` to rebuild the bundles. The planner loads one map at a time, including when opened directly from disk in a current browser.
+
 ## How the estimate works
 
-Route distance is the sum of the horizontal distances between consecutive points, using separate scales for the minimap's width and height.
+The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.
 
 The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit and optional driver speed limit cap the modeled speed.
 
-The model assumes flat, firm ground, 85% drivetrain efficiency, and an acceleration and braking grip limit of 0.55 g. Bends add distance. Slopes, surface changes, cornering losses, and obstacles are outside the model. Use an optional speed limit for routes where you expect lower speeds.
+The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. Uphill grades reduce acceleration and speed. Downhill grades reduce braking and the target speed, with more acceleration available. Surface type and SDK material friction adjust speed and grip. Wheeled vehicles receive larger pace reductions on soft ground than tracked vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
 
-The average-speed estimate covers vehicles without the necessary SDK inputs, including helicopters and boats. Its starting value is based on the vehicle category and can be replaced with a measured average.
+Surface and grade adjustments are estimates. The base model uses 85% drivetrain efficiency and a grip limit of 0.55 g on firm ground. Unknown material uses firm-ground grip, and gaps in terrain coverage use level ground. The app reports sampled and classified portions of the route. Obstacle clearance, water crossings, and turning speed require separate checks.
+
+Ground vehicles without a physics profile use their editable average speed with surface and grade adjustments. Helicopters and boats use their editable average route speed.

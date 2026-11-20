@@ -244,6 +244,7 @@ def driving_profile(variant):
     return {
         "name": blueprint.removeprefix("BP_").removesuffix("_C").replace("_", " "),
         "massKg": mass,
+        "tracked": bool(tracks),
         "radiusMeters": radius,
         "idleRpm": engine.get("idle_rpm", 0),
         "speedLimitKmh": speed_limit,

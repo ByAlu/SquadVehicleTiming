@@ -1,0 +1,41 @@
+"""Build local-browser terrain bundles from the SDK JSON grids."""
+
+from base64 import b64encode
+import gzip
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def build_grid(path):
+    compressed = gzip.compress(path.read_bytes(), compresslevel=6, mtime=0)
+    payload = b64encode(compressed).decode("ascii")
+    chunks = [f'  "{payload[start:start + 4096]}"' for start in range(0, len(payload), 4096)]
+    rows = ",\n".join(chunks)
+    source = ("// Generated from terrain.json by tools/build-terrain.py.\n"
+              f'document.currentScript.terrainPayload = [\n{rows}\n].join("");\n')
+    output = path.with_suffix(".js")
+    if output.is_file() and output.read_text(encoding="utf-8") == source:
+        return output
+
+    stream = NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                                dir=output.parent, delete=False)
+    temporary = Path(stream.name)
+    try:
+        with stream:
+            stream.write(source)
+        temporary.replace(output)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return output
+
+
+if __name__ == "__main__":
+    files = sorted((ROOT / "maps").glob("*/terrain.json"))
+    if not files:
+        raise SystemExit("No terrain grids were found.")
+    for file in files:
+        build_grid(file)
+    print(f"Built {len(files)} terrain bundles.")
