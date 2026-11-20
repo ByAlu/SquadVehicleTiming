@@ -79,7 +79,7 @@ const Terrain = (() => {
           }
         }
         grade = Math.max(-0.45, Math.min(0.45, grade));
-        pieces.push({ distance: horizontal * Math.hypot(1, grade), grade, surface });
+        pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface });
       }
     }
     return { pieces, sampledMeters, classifiedMeters, waterMeters };

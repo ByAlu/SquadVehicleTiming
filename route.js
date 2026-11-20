@@ -1,17 +1,18 @@
 "use strict";
 
 const RouteMath = (() => {
-  function routeLength(points, widthMeters, heightMeters) {
-    let distance = 0;
-    for (let index = 1; index < points.length; index++) {
-      const previous = points[index - 1];
-      const current = points[index];
-      distance += Math.hypot(
+  function legDistances(points, widthMeters, heightMeters) {
+    return points.slice(1).map((current, index) => {
+      const previous = points[index];
+      return Math.hypot(
         (current.x - previous.x) * widthMeters,
         (current.y - previous.y) * heightMeters,
       );
-    }
-    return distance;
+    });
+  }
+
+  function routeLength(points, widthMeters, heightMeters) {
+    return legDistances(points, widthMeters, heightMeters).reduce((total, distance) => total + distance, 0);
   }
 
   function travelSeconds(distanceMeters, speedKmh) {
@@ -29,7 +30,7 @@ const RouteMath = (() => {
     return parts.join(" ");
   }
 
-  return { routeLength, travelSeconds, formatTime };
+  return { legDistances, routeLength, travelSeconds, formatTime };
 })();
 
 if (typeof module !== "undefined") module.exports = RouteMath;

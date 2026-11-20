@@ -131,7 +131,11 @@ details { color: var(--muted); font-size: .85rem; }
 #route-shadow { stroke: #17230f; stroke-width: 8; }
 #route-line { stroke: var(--accent); stroke-width: 4; }
 #markers circle { fill: var(--accent); stroke: #17230f; stroke-width: 2; }
-#markers text { fill: #14200d; font: 700 11px "Segoe UI", sans-serif; text-anchor: middle; dominant-baseline: central; }
+#overlay text { font: 700 12px "Segoe UI", sans-serif; dominant-baseline: central; }
+.node-number { fill: #14200d; text-anchor: middle; }
+.node-distance, .leg-time { stroke: #111615; stroke-width: 4; stroke-linejoin: round; paint-order: stroke; }
+.node-distance { fill: var(--accent); }
+.leg-time { fill: #fff; text-anchor: middle; }
 #cursor { fill: none; stroke: white; stroke-width: 2; }
 .map-message { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .map-message[hidden] { display: none; }

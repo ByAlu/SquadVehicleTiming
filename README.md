@@ -3,7 +3,7 @@
 Open `index.html` in a browser. The planner runs locally using the bundled SDK catalog and the repository's minimaps.
 
 1. In the right sidebar, choose a map and a faction, then select one of that faction's vehicles.
-2. Click the minimap to add waypoints or drag to trace a route. Undo removes the last click or drag. Pan and the zoom controls help with detailed routes.
+2. Left-click the minimap in Draw mode to add a numbered node. Right-click a node to remove it. The planner reconnects and renumbers the route after removal. Undo reverses the last addition or removal. Pan and the zoom controls help with detailed routes.
 3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 
 ## Refresh the SDK data
@@ -54,6 +54,8 @@ The exporter also builds each map's compressed browser bundle. After editing the
 ## How the estimate works
 
 The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.
+
+Each node shows the cumulative route distance from node 1. Each line shows the time for that leg from the same estimate as the total ETA, so the timing model carries speed through intermediate nodes. Each time is rounded for display.
 
 The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 

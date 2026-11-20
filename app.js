@@ -45,6 +45,8 @@ let activeTrackedVehicle = false;
 let terrainGrid = null;
 let routeTerrain = null;
 let terrainStatus = "unavailable";
+let nodeDistances = [];
+let legTimes = [];
 
 function selectMap() {
   finishGesture();
@@ -153,28 +155,37 @@ function selectConfiguration() {
   updateEstimate();
 }
 
+function formatDistance(meters) {
+  return meters >= 1000 ? `${numeric.format(meters / 1000)} km` : `${numeric.format(meters)} m`;
+}
+
 function updateEstimate() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
-  const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(route, width, height) : 0;
+  const distances = width >= 1 && height >= 1 ? RouteMath.legDistances(route, width, height) : [];
+  nodeDistances = [0];
+  for (const leg of distances) nodeDistances.push(nodeDistances.at(-1) + leg);
+  const distance = nodeDistances.at(-1);
   const useTerrain = activeGroundVehicle && terrainGrid && distance > 0;
   if (useTerrain && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
   const terrain = useTerrain ? routeTerrain : null;
   const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
-  let seconds = 0;
-  if (activeDrivingModel) {
-    seconds = conditions
-      ? Driving.travelTerrainSeconds(conditions, activeDrivingModel)
-      : Driving.travelSeconds(distance, activeDrivingModel);
-  } else if (speedInput.validity.valid && speed >= 0.1) {
-    seconds = conditions
-      ? conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0)
-      : RouteMath.travelSeconds(distance, speed);
+  const hasSpeed = speedInput.validity.valid && speed >= 0.1;
+  legTimes = [];
+  if (distance > 0 && (activeDrivingModel || hasSpeed)) {
+    if (conditions) {
+      const pieceTimes = activeDrivingModel ? Driving.travelTerrainPieceSeconds(conditions, activeDrivingModel) :
+        conditions.map((piece) => RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor));
+      legTimes = distances.map(() => 0);
+      pieceTimes.forEach((seconds, index) => { legTimes[terrain.pieces[index].legIndex] += seconds; });
+    } else {
+      legTimes = activeDrivingModel ? Driving.travelLegSeconds(distances, activeDrivingModel) :
+        distances.map((meters) => RouteMath.travelSeconds(meters, speed));
+    }
   }
-  find("distance").textContent = distance > 0
-    ? distance >= 1000 ? `${numeric.format(distance / 1000)} km` : `${numeric.format(distance)} m`
-    : "—";
+  const seconds = legTimes.reduce((total, time) => total + time, 0);
+  find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
   const hasEstimate = seconds > 0 && Number.isFinite(seconds);
   find("time").textContent = hasEstimate ? RouteMath.formatTime(seconds) : "—";
   find("average-speed").textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h` : "—";
@@ -188,6 +199,14 @@ function updateEstimate() {
     terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
   }
   terrainDetail.hidden = !activeGroundVehicle || (!terrain && terrainStatus === "ready");
+  renderRouteLabels();
+  find("route-node-list").replaceChildren(...route.map((_, index) => {
+    const item = document.createElement("li");
+    const distanceLabel = nodeDistanceLabel(index);
+    const timing = index ? `, ${legTimeLabel(index - 1)} from node ${index}` : "";
+    item.textContent = `Node ${index + 1}, ${distanceLabel} from node 1${timing}`;
+    return item;
+  }));
 }
 
 function updateButtons() {
@@ -198,27 +217,53 @@ function updateButtons() {
   find("zoom-fit").disabled = !drawnWidth;
 }
 
-function addMarker(point, label) {
-  const x = point.x * drawnWidth;
-  const y = point.y * drawnHeight;
-  const marker = document.createElementNS(svgNamespace, "circle");
+function mapLabel(x, y, label, className) {
   const text = document.createElementNS(svgNamespace, "text");
-  marker.setAttribute("cx", x);
-  marker.setAttribute("cy", y);
-  marker.setAttribute("r", 9);
   text.setAttribute("x", x);
   text.setAttribute("y", y);
+  text.setAttribute("class", className);
   text.textContent = label;
-  find("markers").append(marker, text);
+  return text;
+}
+
+function nodeDistanceLabel(index) {
+  const meters = nodeDistances[index];
+  return meters === undefined ? "—" : `${numeric.format(Math.round(meters))} m`;
+}
+
+function legTimeLabel(index) {
+  return Number.isFinite(legTimes[index]) ? RouteMath.formatTime(legTimes[index]) : "—";
+}
+
+function renderRouteLabels() {
+  const markers = document.createDocumentFragment();
+  const timings = document.createDocumentFragment();
+  route.forEach((point, index) => {
+    const x = point.x * drawnWidth;
+    const y = point.y * drawnHeight;
+    const marker = document.createElementNS(svgNamespace, "circle");
+    marker.setAttribute("cx", x);
+    marker.setAttribute("cy", y);
+    marker.setAttribute("r", 11);
+    const labelOnLeft = x > drawnWidth - 86;
+    const distance = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeDistanceLabel(index), "node-distance");
+    distance.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
+    markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), distance);
+    if (index) {
+      const previous = route[index - 1];
+      const midY = (previous.y + point.y) * drawnHeight / 2;
+      timings.append(mapLabel((previous.x + point.x) * drawnWidth / 2,
+        midY + (midY < 24 ? 13 : -13), legTimeLabel(index - 1), "leg-time"));
+    }
+  });
+  find("markers").replaceChildren(markers);
+  find("leg-times").replaceChildren(timings);
 }
 
 function renderRoute() {
   const points = route.map(({ x, y }) => `${x * drawnWidth},${y * drawnHeight}`).join(" ");
   find("route-shadow").setAttribute("points", points);
   find("route-line").setAttribute("points", points);
-  find("markers").replaceChildren();
-  if (route.length) addMarker(route[0], "A");
-  if (route.length > 1) addMarker(route.at(-1), "B");
   cursor.setAttribute("cx", keyboardPoint.x * drawnWidth);
   cursor.setAttribute("cy", keyboardPoint.y * drawnHeight);
   cursor.setAttribute("visibility", keyboardActive ? "visible" : "hidden");
@@ -226,8 +271,7 @@ function renderRoute() {
 
 function routeChanged() {
   routeTerrain = null;
-  find("route-status").textContent = route.length > 1 ? "Add another point to extend the route." :
-    route.length ? "Add an end point." : "Add a start point.";
+  find("route-status").textContent = route.length ? `${route.length} ${route.length === 1 ? "node" : "nodes"}` : "Add node 1.";
   renderRoute();
   updateEstimate();
   updateButtons();
@@ -243,7 +287,9 @@ function clearRoute() {
 function undo() {
   finishGesture();
   if (!edits.length) return;
-  route.length = edits.pop();
+  const { index, removed } = edits.pop();
+  if (removed) route.splice(index, 0, removed);
+  else route.splice(index, 1);
   routeChanged();
 }
 
@@ -273,6 +319,7 @@ function layoutMap(nextZoom, anchorX, anchorY) {
   find("zoom-fit").textContent = `${Math.round(zoom * 100)}%`;
   positionMap();
   renderRoute();
+  renderRouteLabels();
   updateButtons();
 }
 
@@ -299,14 +346,27 @@ function inside({ x, y }) {
   return x >= 0 && x <= 1 && y >= 0 && y <= 1;
 }
 
-function appendPoint(point, minimumPixels = 0) {
+function appendPoint(point) {
   const previous = route.at(-1);
-  if (previous) {
-    const gap = Math.hypot((previous.x - point.x) * drawnWidth, (previous.y - point.y) * drawnHeight);
-    if (gap <= minimumPixels) return;
-  }
-  if (gesture && route.length === gesture.start) edits.push(gesture.start);
+  if (previous && previous.x === point.x && previous.y === point.y) return;
+  edits.push({ index: route.length });
   route.push(point);
+  routeChanged();
+}
+
+function removeNodeAt(point) {
+  let nearest = -1;
+  let radius = 14;
+  route.forEach((node, index) => {
+    const distance = Math.hypot((node.x - point.x) * drawnWidth, (node.y - point.y) * drawnHeight);
+    if (distance <= radius) {
+      nearest = index;
+      radius = distance;
+    }
+  });
+  if (nearest < 0) return;
+  const [removed] = route.splice(nearest, 1);
+  edits.push({ index: nearest, removed });
   routeChanged();
 }
 
@@ -332,9 +392,8 @@ viewport.addEventListener("pointerdown", (event) => {
   if (mode === "draw" && !inside(point)) return;
   viewport.focus({ preventScroll: true });
   keyboardActive = false;
-  gesture = { id: event.pointerId, start: route.length, position };
+  gesture = { id: event.pointerId, position, moved: false };
   viewport.setPointerCapture(event.pointerId);
-  if (mode === "draw") appendPoint(point);
   renderRoute();
 });
 
@@ -346,22 +405,30 @@ viewport.addEventListener("pointermove", (event) => {
     mapTop += position.y - gesture.position.y;
     gesture.position = position;
     positionMap();
-  } else {
-    const point = mapPoint(position);
-    if (inside(point)) appendPoint(point, 4);
+  } else if (Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) > 5) {
+    gesture.moved = true;
   }
 });
 
 for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
   viewport.addEventListener(eventName, (event) => {
     if (gesture?.id !== event.pointerId) return;
-    if (eventName === "pointerup" && mode === "draw") {
-      const point = mapPoint(localPoint(event));
-      if (inside(point)) appendPoint(point, 1);
+    if (eventName === "pointerup" && mode === "draw" && !gesture.moved) {
+      const position = localPoint(event);
+      const point = mapPoint(position);
+      if (inside(point) && Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) <= 5) {
+        appendPoint(point);
+      }
     }
     finishGesture();
   });
 }
+
+viewport.addEventListener("contextmenu", (event) => {
+  if (!drawnWidth || gesture || event.button !== 2) return;
+  event.preventDefault();
+  removeNodeAt(mapPoint(localPoint(event)));
+});
 
 viewport.addEventListener("wheel", (event) => {
   if (!drawnWidth || gesture || document.activeElement !== viewport || event.ctrlKey) return;
@@ -386,11 +453,10 @@ viewport.addEventListener("keydown", (event) => {
     renderRoute();
   } else if ((event.key === "Enter" || event.key === " ") && mode === "draw") {
     keyboardActive = true;
-    const start = route.length;
     appendPoint({ ...keyboardPoint });
-    if (route.length > start) edits.push(start);
-    updateButtons();
     renderRoute();
+  } else if (event.key === "Delete" && keyboardActive) {
+    removeNodeAt(keyboardPoint);
   } else if (event.key === "+" || event.key === "=") {
     centerZoom(zoom * 1.5);
   } else if (event.key === "-") {

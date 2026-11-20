@@ -88,8 +88,24 @@ const Driving = (() => {
     };
   }
 
-  function travelSeconds(distance, model, speedLimitKmh = Infinity) {
-    if (!(distance > 0 && speedLimitKmh > 0)) return 0;
+  function accelerationTimeAtDistance(samples, distance) {
+    let low = 1;
+    let high = samples.length - 1;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (samples[middle].distance < distance) low = middle + 1;
+      else high = middle;
+    }
+    const before = samples[low - 1];
+    const after = samples[low];
+    const traveled = distance - before.distance;
+    const fraction = traveled / (after.distance - before.distance);
+    const speed = Math.sqrt(before.speed ** 2 + fraction * (after.speed ** 2 - before.speed ** 2));
+    return before.time + 2 * traveled / (before.speed + speed);
+  }
+
+  function flatTravelClock(distance, model, speedLimitKmh) {
+    if (!(distance > 0 && speedLimitKmh > 0)) return () => 0;
     const { samples, braking } = model;
     const limit = Math.min(samples.at(-1).speed, speedLimitKmh / 3.6);
     let speed = limit;
@@ -106,13 +122,38 @@ const Driving = (() => {
         else upper = middle;
       }
       speed = lower;
-      if (speed === 0) return 0;
+      if (speed === 0) return () => 0;
       acceleration = accelerationAt(samples, speed);
       brakingDistance = speed * speed / (2 * braking);
     }
 
     const cruiseDistance = Math.max(0, distance - acceleration.distance - brakingDistance);
-    return acceleration.time + cruiseDistance / speed + speed / braking;
+    const seconds = acceleration.time + cruiseDistance / speed + speed / braking;
+    return (position) => {
+      if (position <= 0) return 0;
+      if (position >= distance) return seconds;
+      if (position < acceleration.distance) return accelerationTimeAtDistance(samples, position);
+      if (position < distance - brakingDistance) return acceleration.time + (position - acceleration.distance) / speed;
+      return seconds - Math.sqrt(2 * (distance - position) / braking);
+    };
+  }
+
+  function travelSeconds(distance, model, speedLimitKmh = Infinity) {
+    return flatTravelClock(distance, model, speedLimitKmh)(distance);
+  }
+
+  function travelLegSeconds(distances, model, speedLimitKmh = Infinity) {
+    const total = distances.reduce((sum, distance) => sum + distance, 0);
+    const timeAt = flatTravelClock(total, model, speedLimitKmh);
+    let position = 0;
+    let elapsed = 0;
+    return distances.map((distance) => {
+      position += distance;
+      const time = timeAt(position);
+      const duration = time - elapsed;
+      elapsed = time;
+      return duration;
+    });
   }
 
   function accelerationFromSpeed(samples, speed) {
@@ -126,10 +167,10 @@ const Driving = (() => {
     return samples[Math.min(low, samples.length - 1)].acceleration;
   }
 
-  function travelTerrainSeconds(pieces, model, speedLimitKmh = Infinity) {
-    if (!pieces.length || !(speedLimitKmh > 0)) return 0;
+  function travelTerrainPieceSeconds(pieces, model, speedLimitKmh = Infinity) {
+    if (!(speedLimitKmh > 0)) return pieces.map(() => 0);
     if (pieces.every(({ grade, speedFactor, gripFactor }) => grade === 0 && speedFactor === 1 && gripFactor === 1)) {
-      return travelSeconds(pieces.reduce((total, piece) => total + piece.distance, 0), model, speedLimitKmh);
+      return travelLegSeconds(pieces.map((piece) => piece.distance), model, speedLimitKmh);
     }
 
     const { samples, shifts } = model;
@@ -151,9 +192,8 @@ const Driving = (() => {
       safeSpeeds[index] = Math.min(cap, Math.sqrt(safeSpeeds[index + 1] ** 2 + 2 * braking * distance));
     }
 
-    let time = 0;
     let start = 0;
-    for (const [index, segment] of segments.entries()) {
+    return segments.map((segment, index) => {
       const { distance, cap, grip, power, braking } = segment;
       const launch = Math.min(grip, accelerationFromSpeed(samples, start) * power);
       const reachable = Math.sqrt(start ** 2 + 2 * launch * distance);
@@ -165,16 +205,20 @@ const Driving = (() => {
       const accelerating = (peak ** 2 - start ** 2) / (2 * acceleration);
       const brakingDistance = (peak ** 2 - end ** 2) / (2 * braking);
       const cruising = Math.max(0, distance - accelerating - brakingDistance);
-      time += (peak - start) / acceleration + cruising / peak + (peak - end) / braking;
+      let time = (peak - start) / acceleration + cruising / peak + (peak - end) / braking;
       for (const shift of shifts) {
         if (start <= shift.speed && shift.speed < peak) time += shift.time * (1 - shift.speed / peak);
       }
       start = end;
-    }
-    return time;
+      return time;
+    });
   }
 
-  return { prepare, travelSeconds, travelTerrainSeconds };
+  function travelTerrainSeconds(pieces, model, speedLimitKmh = Infinity) {
+    return travelTerrainPieceSeconds(pieces, model, speedLimitKmh).reduce((total, time) => total + time, 0);
+  }
+
+  return { prepare, travelSeconds, travelLegSeconds, travelTerrainSeconds, travelTerrainPieceSeconds };
 })();
 
 if (typeof module !== "undefined") module.exports = Driving;
