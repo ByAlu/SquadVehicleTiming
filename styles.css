@@ -133,8 +133,8 @@ details { color: var(--muted); font-size: .85rem; }
 #markers circle { fill: var(--accent); stroke: #17230f; stroke-width: 2; }
 #overlay text { font: 700 12px "Segoe UI", sans-serif; dominant-baseline: central; }
 .node-number { fill: #14200d; text-anchor: middle; }
-.node-distance, .leg-time { stroke: #111615; stroke-width: 4; stroke-linejoin: round; paint-order: stroke; }
-.node-distance { fill: var(--accent); }
+.node-time, .leg-time { stroke: #111615; stroke-width: 4; stroke-linejoin: round; paint-order: stroke; }
+.node-time { fill: var(--accent); }
 .leg-time { fill: #fff; text-anchor: middle; }
 #cursor { fill: none; stroke: white; stroke-width: 2; }
 .map-message { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }

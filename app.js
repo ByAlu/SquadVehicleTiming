@@ -45,7 +45,7 @@ let activeTrackedVehicle = false;
 let terrainGrid = null;
 let routeTerrain = null;
 let terrainStatus = "unavailable";
-let nodeDistances = [];
+let nodeTimes = [];
 let legTimes = [];
 
 function selectMap() {
@@ -164,9 +164,7 @@ function updateEstimate() {
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
   const distances = width >= 1 && height >= 1 ? RouteMath.legDistances(route, width, height) : [];
-  nodeDistances = [0];
-  for (const leg of distances) nodeDistances.push(nodeDistances.at(-1) + leg);
-  const distance = nodeDistances.at(-1);
+  const distance = distances.reduce((total, meters) => total + meters, 0);
   const useTerrain = activeGroundVehicle && terrainGrid && distance > 0;
   if (useTerrain && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
   const terrain = useTerrain ? routeTerrain : null;
@@ -184,7 +182,9 @@ function updateEstimate() {
         distances.map((meters) => RouteMath.travelSeconds(meters, speed));
     }
   }
-  const seconds = legTimes.reduce((total, time) => total + time, 0);
+  nodeTimes = [0];
+  for (const time of legTimes) nodeTimes.push(nodeTimes.at(-1) + time);
+  const seconds = nodeTimes.at(-1);
   find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
   const hasEstimate = seconds > 0 && Number.isFinite(seconds);
   find("time").textContent = hasEstimate ? RouteMath.formatTime(seconds) : "—";
@@ -202,9 +202,8 @@ function updateEstimate() {
   renderRouteLabels();
   find("route-node-list").replaceChildren(...route.map((_, index) => {
     const item = document.createElement("li");
-    const distanceLabel = nodeDistanceLabel(index);
     const timing = index ? `, ${legTimeLabel(index - 1)} from node ${index}` : "";
-    item.textContent = `Node ${index + 1}, ${distanceLabel} from node 1${timing}`;
+    item.textContent = `Node ${index + 1}, ${nodeTimeLabel(index)} elapsed${timing}`;
     return item;
   }));
 }
@@ -226,9 +225,9 @@ function mapLabel(x, y, label, className) {
   return text;
 }
 
-function nodeDistanceLabel(index) {
-  const meters = nodeDistances[index];
-  return meters === undefined ? "—" : `${numeric.format(Math.round(meters))} m`;
+function nodeTimeLabel(index) {
+  if (index === 0) return "0s";
+  return Number.isFinite(nodeTimes[index]) ? RouteMath.formatTime(nodeTimes[index]) : "—";
 }
 
 function legTimeLabel(index) {
@@ -246,9 +245,9 @@ function renderRouteLabels() {
     marker.setAttribute("cy", y);
     marker.setAttribute("r", 11);
     const labelOnLeft = x > drawnWidth - 86;
-    const distance = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeDistanceLabel(index), "node-distance");
-    distance.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
-    markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), distance);
+    const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeTimeLabel(index), "node-time");
+    elapsed.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
+    markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), elapsed);
     if (index) {
       const previous = route[index - 1];
       const midY = (previous.y + point.y) * drawnHeight / 2;
