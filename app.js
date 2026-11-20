@@ -4,11 +4,14 @@ const find = (id) => document.getElementById(id);
 const sdk = window.squadSdkData;
 const vehicles = window.squadVehicles;
 const mapSelect = find("map-select");
+const factionSelect = find("faction-select");
 const vehicleSelect = find("vehicle-select");
 const configurationSelect = find("configuration");
 const widthInput = find("width");
 const heightInput = find("height");
 const speedInput = find("speed");
+const speedLabel = find("speed-label");
+const speedField = speedInput.parentElement;
 const viewport = find("viewport");
 const stage = find("stage");
 const image = find("map-image");
@@ -24,6 +27,8 @@ const scales = new Map();
 const speeds = new Map();
 const configurations = new Map();
 const drivingModels = new WeakMap();
+const vehiclesByFaction = new Map();
+const selectedVehicles = new Map();
 const keyboardPoint = { x: 0.5, y: 0.5 };
 let keyboardActive = false;
 let mode = "draw";
@@ -100,9 +105,27 @@ function updateMapDetail() {
   }
 }
 
+function selectFaction() {
+  const faction = factionSelect.value;
+  const indices = vehiclesByFaction.get(faction);
+  const names = new Map();
+  for (const index of indices) {
+    const { name } = vehicles[index];
+    names.set(name, (names.get(name) ?? 0) + 1);
+  }
+  vehicleSelect.replaceChildren(...indices.map((index) => {
+    const { name, type } = vehicles[index];
+    const label = names.get(name) > 1 && type ? `${name} · ${type}` : name;
+    return new Option(label, index);
+  }));
+  vehicleSelect.value = selectedVehicles.get(faction) ?? String(indices[0]);
+  selectVehicle();
+}
+
 function selectVehicle() {
   const vehicle = vehicles[Number(vehicleSelect.value)];
-  find("vehicle-detail").textContent = [vehicle.faction, vehicle.type].filter(Boolean).join(" · ");
+  selectedVehicles.set(vehicle.faction, vehicleSelect.value);
+  find("vehicle-detail").textContent = vehicle.type ?? "";
   configurationSelect.replaceChildren();
   for (const [index, profile] of (vehicle.drivingProfiles ?? []).entries()) {
     if (!drivingModels.has(profile)) drivingModels.set(profile, Driving.prepare(profile));
@@ -121,12 +144,11 @@ function selectConfiguration() {
   activeDrivingModel = profile ? drivingModels.get(profile) : null;
   activeGroundVehicle = vehicle.type !== "Helicopter" && vehicle.type !== "Boat";
   activeTrackedVehicle = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
-  find("speed-label").textContent = activeDrivingModel ? "Speed limit (optional)" :
-    activeGroundVehicle ? "Average speed on firm, flat ground" : "Average route speed";
-  speedInput.placeholder = activeDrivingModel ? "Automatic" : "";
-  speedInput.value = speeds.get(vehicle.id) ?? (activeDrivingModel ? "" : vehicle.assumedSpeedKmh ?? "");
+  speedLabel.hidden = speedField.hidden = speedInput.disabled = Boolean(activeDrivingModel);
+  speedLabel.textContent = activeGroundVehicle ? "Average speed on firm, flat ground" : "Average route speed";
+  speedInput.value = activeDrivingModel ? "" : (speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "");
   find("speed-detail").textContent = activeDrivingModel
-    ? `SDK gearing limit ${numeric.format(profile.speedLimitKmh)} km/h. Starts and stops at rest.`
+    ? "SDK driving profile. Starts and stops at rest."
     : "Average-speed estimate.";
   updateEstimate();
 }
@@ -141,17 +163,14 @@ function updateEstimate() {
   const terrain = useTerrain ? routeTerrain : null;
   const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
   let seconds = 0;
-  if (speedInput.validity.valid) {
-    if (activeDrivingModel) {
-      const cap = speedInput.value === "" ? Infinity : speed;
-      seconds = conditions
-        ? Driving.travelTerrainSeconds(conditions, activeDrivingModel, cap)
-        : Driving.travelSeconds(distance, activeDrivingModel, cap);
-    } else if (speed >= 0.1) {
-      seconds = conditions
-        ? conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0)
-        : RouteMath.travelSeconds(distance, speed);
-    }
+  if (activeDrivingModel) {
+    seconds = conditions
+      ? Driving.travelTerrainSeconds(conditions, activeDrivingModel)
+      : Driving.travelSeconds(distance, activeDrivingModel);
+  } else if (speedInput.validity.valid && speed >= 0.1) {
+    seconds = conditions
+      ? conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0)
+      : RouteMath.travelSeconds(distance, speed);
   }
   find("distance").textContent = distance > 0
     ? distance >= 1000 ? `${numeric.format(distance / 1000)} km` : `${numeric.format(distance)} m`
@@ -393,24 +412,15 @@ if (sdk?.maps.length && vehicles?.length) {
   find("version").textContent = `SDK ${sdk.version}`;
   for (const map of sdk.maps) mapSelect.add(new Option(map.name, map.name));
   mapSelect.value = sdk.maps.some((map) => map.name === "Yehorivka") ? "Yehorivka" : sdk.maps[0].name;
-  const factions = new Map();
-  const vehicleLabels = new Map();
-  for (const { faction, name } of vehicles) {
-    const key = `${faction}/${name}`;
-    vehicleLabels.set(key, (vehicleLabels.get(key) ?? 0) + 1);
-  }
-  vehicles.forEach((vehicle, index) => {
-    if (!factions.has(vehicle.faction)) {
-      const group = document.createElement("optgroup");
-      group.label = vehicle.faction;
-      vehicleSelect.append(group);
-      factions.set(vehicle.faction, group);
+  vehicles.forEach(({ faction }, index) => {
+    if (!vehiclesByFaction.has(faction)) {
+      vehiclesByFaction.set(faction, []);
+      factionSelect.add(new Option(faction, faction));
     }
-    const duplicate = vehicleLabels.get(`${vehicle.faction}/${vehicle.name}`) > 1;
-    const label = duplicate && vehicle.type ? `${vehicle.name} · ${vehicle.type}` : vehicle.name;
-    factions.get(vehicle.faction).append(new Option(label, index));
+    vehiclesByFaction.get(faction).push(index);
   });
   mapSelect.addEventListener("change", selectMap);
+  factionSelect.addEventListener("change", selectFaction);
   vehicleSelect.addEventListener("change", selectVehicle);
   configurationSelect.addEventListener("change", () => {
     configurations.set(vehicles[Number(vehicleSelect.value)].id, configurationSelect.value);
@@ -436,7 +446,7 @@ if (sdk?.maps.length && vehicles?.length) {
   find("zoom-in").addEventListener("click", () => centerZoom(zoom * 1.5));
   find("zoom-fit").addEventListener("click", fitMap);
   new ResizeObserver(() => centerZoom(zoom)).observe(viewport);
-  selectVehicle();
+  selectFaction();
   selectMap();
 } else {
   for (const control of document.querySelectorAll("button, input, select")) control.disabled = true;

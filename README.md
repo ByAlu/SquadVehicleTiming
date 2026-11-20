@@ -2,9 +2,9 @@
 
 Open `index.html` in a browser. The planner runs locally using the bundled SDK catalog and the repository's minimaps.
 
-1. Choose a map and a vehicle. The vehicle list is grouped by faction.
+1. In the right sidebar, choose a map and a faction, then select one of that faction's vehicles.
 2. Click the minimap to add waypoints or drag to trace a route. Undo removes the last click or drag. Pan and the zoom controls help with detailed routes.
-3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted and optionally set a **Speed limit**. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
+3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 
 ## Refresh the SDK data
 
@@ -55,7 +55,7 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.
 
-The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit and optional driver speed limit cap the modeled speed.
+The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 
 The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. Uphill grades reduce acceleration and speed. Downhill grades reduce braking and the target speed, with more acceleration available. Surface type and SDK material friction adjust speed and grip. Wheeled vehicles receive larger pace reductions on soft ground than tracked vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
 

@@ -21,16 +21,9 @@
   </header>
   <main class="planner">
     <aside class="sidebar" aria-label="Route settings">
-      <section class="estimate" aria-labelledby="estimate-label">
-        <h1 id="estimate-label">Estimated travel time</h1>
-        <output class="time" id="time" aria-live="polite">—</output>
-        <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
-        <div class="distance"><span>Estimated average speed</span><output id="average-speed">—</output></div>
-        <p class="detail terrain-detail" id="terrain-detail" hidden></p>
-      </section>
       <section class="settings" aria-label="Map and vehicle">
         <label for="map-select">Map</label>
-        <select id="map-select"></select>
+        <select id="map-select" aria-describedby="map-detail"></select>
         <div class="detail" id="map-detail"></div>
         <details id="calibration">
           <summary>Map scale</summary>
@@ -39,8 +32,10 @@
             <label>Height (m)<input id="height" type="number" min="1" step="any" inputmode="decimal"></label>
           </div>
         </details>
+        <label for="faction-select">Faction</label>
+        <select id="faction-select"></select>
         <label for="vehicle-select">Vehicle</label>
-        <select id="vehicle-select"></select>
+        <select id="vehicle-select" aria-describedby="vehicle-detail"></select>
         <div class="detail" id="vehicle-detail"></div>
         <label id="configuration-label" for="configuration" hidden>Vehicle configuration</label>
         <select id="configuration" hidden></select>
@@ -50,6 +45,13 @@
           <span>km/h</span>
         </div>
         <p class="detail" id="speed-detail"></p>
+      </section>
+      <section class="estimate" aria-labelledby="estimate-label">
+        <h1 id="estimate-label">Estimated travel time</h1>
+        <output class="time" id="time" aria-live="polite">—</output>
+        <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
+        <div class="distance"><span>Estimated average speed</span><output id="average-speed">—</output></div>
+        <p class="detail terrain-detail" id="terrain-detail" hidden></p>
       </section>
     </aside>
     <section class="map-panel" aria-labelledby="map-heading">

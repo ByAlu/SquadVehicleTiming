@@ -41,7 +41,8 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
 .version { margin-left: auto; color: var(--muted); font: .8rem ui-monospace, monospace; }
 .planner {
   display: grid;
-  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  grid-template-areas: "map sidebar";
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
   gap: 1.25rem;
   max-width: 100rem;
   margin: auto;
@@ -49,8 +50,9 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
   align-items: start;
 }
 .sidebar, .map-panel { border: 1px solid var(--border); border-radius: .8rem; background: var(--panel); }
+.sidebar { grid-area: sidebar; min-width: 0; }
 .estimate, .settings { padding: 1.15rem; }
-.estimate { background: #202820; border-radius: .8rem .8rem 0 0; border-bottom: 1px solid var(--border); }
+.estimate { background: #202820; border-radius: 0 0 .8rem .8rem; border-top: 1px solid var(--border); }
 .estimate h1 { font-size: .9rem; margin: 0; color: #d1dbcc; font-weight: 600; }
 .time {
   display: block;
@@ -65,7 +67,8 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
 .distance output { color: #f2f4ed; font-variant-numeric: tabular-nums; }
 .distance + .distance, .estimate .terrain-detail { margin-top: .5rem; }
 .settings { display: grid; gap: .5rem; }
-.settings > label { margin-top: .55rem; font-size: .93rem; font-weight: 650; }
+.settings > label { font-size: .93rem; font-weight: 650; }
+.settings > label:not(:first-child) { margin-top: .55rem; }
 input, select {
   min-width: 0;
   width: 100%;
@@ -90,7 +93,7 @@ details { color: var(--muted); font-size: .85rem; }
 .speed-field { position: relative; }
 .speed-field input { padding-right: 4rem; }
 .speed-field span { position: absolute; right: .8rem; top: .7rem; color: var(--muted); pointer-events: none; font-size: .9rem; }
-.map-panel { min-width: 0; overflow: hidden; }
+.map-panel { grid-area: map; min-width: 0; overflow: hidden; }
 .map-top, .map-bottom { padding: .8rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
 .map-top h2 { margin: 0; font-size: 1.1rem; }
 .map-top p, .map-bottom { margin: .2rem 0 0; color: var(--muted); font-size: .85rem; }
@@ -137,7 +140,7 @@ details { color: var(--muted); font-size: .85rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (max-width: 760px) {
-  .planner { grid-template-columns: 1fr; }
+  .planner { grid-template-areas: "sidebar" "map"; grid-template-columns: minmax(0, 1fr); }
   .viewport { height: clamp(20rem, 62vh, 40rem); }
 }
 @media (max-width: 420px) {
