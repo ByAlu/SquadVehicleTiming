@@ -104,47 +104,25 @@ const Driving = (() => {
     return before.time + 2 * traveled / (before.speed + speed);
   }
 
-  function flatTravelClock(distance, model, speedLimitKmh) {
-    if (!(distance > 0 && speedLimitKmh > 0)) return () => 0;
-    const { samples, braking } = model;
-    const limit = Math.min(samples.at(-1).speed, speedLimitKmh / 3.6);
-    let speed = limit;
-    let acceleration = accelerationAt(samples, speed);
-    let brakingDistance = speed * speed / (2 * braking);
-
-    if (acceleration.distance + brakingDistance > distance) {
-      let lower = 0;
-      let upper = limit;
-      for (let index = 0; index < 48; index++) {
-        const middle = (lower + upper) / 2;
-        const required = accelerationAt(samples, middle).distance + middle * middle / (2 * braking);
-        if (required <= distance) lower = middle;
-        else upper = middle;
-      }
-      speed = lower;
-      if (speed === 0) return () => 0;
-      acceleration = accelerationAt(samples, speed);
-      brakingDistance = speed * speed / (2 * braking);
-    }
-
-    const cruiseDistance = Math.max(0, distance - acceleration.distance - brakingDistance);
-    const seconds = acceleration.time + cruiseDistance / speed + speed / braking;
+  function flatTravelClock(model, speedLimitKmh) {
+    if (!(speedLimitKmh > 0)) return () => 0;
+    const { samples } = model;
+    const speed = Math.min(samples.at(-1).speed, speedLimitKmh / 3.6);
+    const acceleration = accelerationAt(samples, speed);
     return (position) => {
-      if (position <= 0) return 0;
-      if (position >= distance) return seconds;
+      if (!(position > 0)) return 0;
       if (position < acceleration.distance) return accelerationTimeAtDistance(samples, position);
-      if (position < distance - brakingDistance) return acceleration.time + (position - acceleration.distance) / speed;
-      return seconds - Math.sqrt(2 * (distance - position) / braking);
+      return acceleration.time + (position - acceleration.distance) / speed;
     };
   }
 
   function travelSeconds(distance, model, speedLimitKmh = Infinity) {
-    return flatTravelClock(distance, model, speedLimitKmh)(distance);
+    return distance > 0 ? flatTravelClock(model, speedLimitKmh)(distance) : 0;
   }
 
   function travelLegSeconds(distances, model, speedLimitKmh = Infinity) {
-    const total = distances.reduce((sum, distance) => sum + distance, 0);
-    const timeAt = flatTravelClock(total, model, speedLimitKmh);
+    if (!distances.length) return [];
+    const timeAt = flatTravelClock(model, speedLimitKmh);
     let position = 0;
     let elapsed = 0;
     return distances.map((distance) => {
@@ -185,8 +163,9 @@ const Driving = (() => {
         model.braking * gripFactor * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade))),
     }));
     const safeSpeeds = new Float64Array(segments.length + 1);
+    safeSpeeds[segments.length] = Infinity;
     // Set approach speeds from the destination backwards so the vehicle can
-    // slow for a surface change or stop without jumping to a lower speed.
+    // slow for terrain changes. The destination imposes no speed restriction.
     for (let index = segments.length - 1; index >= 0; index--) {
       const { cap, distance, braking } = segments[index];
       safeSpeeds[index] = Math.min(cap, Math.sqrt(safeSpeeds[index + 1] ** 2 + 2 * braking * distance));

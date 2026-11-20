@@ -57,7 +57,7 @@ The displayed distance is horizontal map distance. The displayed average speed d
 
 Each node shows the elapsed travel time from node 1, which starts at 0 seconds. The timing model carries speed through intermediate nodes. Each time is rounded for display.
 
-The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
+The driving estimate starts at rest, accelerates at full throttle through the forward gears, and cruises if there is enough distance. The vehicle passes every node at the fastest speed the model allows, including the destination. The estimate uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 
 The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. Uphill grades reduce acceleration and speed. Downhill grades reduce braking and the target speed, with more acceleration available. Surface type and SDK material friction adjust speed and grip. Wheeled vehicles receive larger pace reductions on soft ground than tracked vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
 

@@ -149,7 +149,7 @@ function selectConfiguration() {
   speedLabel.textContent = activeGroundVehicle ? "Average speed on firm, flat ground" : "Average route speed";
   speedInput.value = activeDrivingModel ? "" : (speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "");
   find("speed-detail").textContent = activeDrivingModel
-    ? "SDK driving profile. Starts and stops at rest."
+    ? "SDK driving profile. Starts from rest and passes through each node."
     : "Average-speed estimate.";
   updateEstimate();
 }
