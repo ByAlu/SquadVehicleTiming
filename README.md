@@ -55,7 +55,7 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.
 
-Each node shows the elapsed travel time from node 1, which starts at 0 seconds. Each line shows the time for that leg from the same estimate as the total ETA, so the timing model carries speed through intermediate nodes. Each time is rounded for display.
+Each node shows the elapsed travel time from node 1, which starts at 0 seconds. The timing model carries speed through intermediate nodes. Each time is rounded for display.
 
 The driving estimate starts at rest, accelerates at full throttle through the forward gears, cruises if there is enough distance, and brakes to rest at the end. It uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 

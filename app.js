@@ -46,7 +46,6 @@ let terrainGrid = null;
 let routeTerrain = null;
 let terrainStatus = "unavailable";
 let nodeTimes = [];
-let legTimes = [];
 
 function selectMap() {
   finishGesture();
@@ -170,7 +169,7 @@ function updateEstimate() {
   const terrain = useTerrain ? routeTerrain : null;
   const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
   const hasSpeed = speedInput.validity.valid && speed >= 0.1;
-  legTimes = [];
+  let legTimes = [];
   if (distance > 0 && (activeDrivingModel || hasSpeed)) {
     if (conditions) {
       const pieceTimes = activeDrivingModel ? Driving.travelTerrainPieceSeconds(conditions, activeDrivingModel) :
@@ -202,8 +201,7 @@ function updateEstimate() {
   renderRouteLabels();
   find("route-node-list").replaceChildren(...route.map((_, index) => {
     const item = document.createElement("li");
-    const timing = index ? `, ${legTimeLabel(index - 1)} from node ${index}` : "";
-    item.textContent = `Node ${index + 1}, ${nodeTimeLabel(index)} elapsed${timing}`;
+    item.textContent = `Node ${index + 1}, ${nodeTimeLabel(index)} elapsed`;
     return item;
   }));
 }
@@ -230,13 +228,8 @@ function nodeTimeLabel(index) {
   return Number.isFinite(nodeTimes[index]) ? RouteMath.formatTime(nodeTimes[index]) : "—";
 }
 
-function legTimeLabel(index) {
-  return Number.isFinite(legTimes[index]) ? RouteMath.formatTime(legTimes[index]) : "—";
-}
-
 function renderRouteLabels() {
   const markers = document.createDocumentFragment();
-  const timings = document.createDocumentFragment();
   route.forEach((point, index) => {
     const x = point.x * drawnWidth;
     const y = point.y * drawnHeight;
@@ -248,15 +241,8 @@ function renderRouteLabels() {
     const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeTimeLabel(index), "node-time");
     elapsed.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
     markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), elapsed);
-    if (index) {
-      const previous = route[index - 1];
-      const midY = (previous.y + point.y) * drawnHeight / 2;
-      timings.append(mapLabel((previous.x + point.x) * drawnWidth / 2,
-        midY + (midY < 24 ? 13 : -13), legTimeLabel(index - 1), "leg-time"));
-    }
   });
   find("markers").replaceChildren(markers);
-  find("leg-times").replaceChildren(timings);
 }
 
 function renderRoute() {
