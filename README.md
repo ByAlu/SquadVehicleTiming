@@ -2,7 +2,7 @@
 
 Open `index.html` in a browser. The planner runs locally using the bundled SDK catalog and the repository's minimaps.
 
-1. In the right sidebar, choose a map and a faction, then select one of that faction's vehicles.
+1. In the right sidebar, choose a map and a faction, select a vehicle, and click **Add vehicle**. Repeat across factions to compare vehicles on the same route. Each selected vehicle has a color shared by its name and node times.
 2. Click the minimap in Draw mode to add a numbered node. Select an existing node and click an empty spot to start a new branch from it. Right-click a node to remove it and reconnect its children to its parent. If you remove node 1, its first child becomes the new start. Undo reverses the last addition or removal.
 3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 4. Scroll over the map to zoom in or out around your pointer. Use Pan to move the map and the percentage button to fit the whole map again.
@@ -56,7 +56,7 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.
 
-Each node shows the elapsed travel time along its own path from node 1, which starts at 0 seconds. The sidebar shows the estimate for the highlighted path to the selected node. Speed carries through intermediate nodes, and terrain beyond a node is outside that node's estimate. Each time is rounded for display.
+Each node shows the elapsed travel time for every selected vehicle along its own path from node 1, which starts at 0 seconds. The sidebar compares the estimates for the highlighted path to the selected node. Speed carries through intermediate nodes, and terrain beyond a node is outside that node's estimate. Each time is rounded for display.
 
 The driving estimate starts at rest, accelerates at full throttle through the forward gears, and cruises if there is enough distance. The vehicle passes every node at the fastest speed the model allows, including the destination. The estimate uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 

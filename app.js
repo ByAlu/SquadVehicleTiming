@@ -6,12 +6,9 @@ const vehicles = window.squadVehicles;
 const mapSelect = find("map-select");
 const factionSelect = find("faction-select");
 const vehicleSelect = find("vehicle-select");
-const configurationSelect = find("configuration");
+const addVehicleButton = find("add-vehicle");
 const widthInput = find("width");
 const heightInput = find("height");
-const speedInput = find("speed");
-const speedLabel = find("speed-label");
-const speedField = speedInput.parentElement;
 const viewport = find("viewport");
 const stage = find("stage");
 const image = find("map-image");
@@ -20,6 +17,7 @@ const cursor = find("cursor");
 const mapMessage = find("map-message");
 const svgNamespace = "http://www.w3.org/2000/svg";
 const numeric = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+const vehicleColors = ["#e1fa91", "#85d9ff", "#ffc180", "#f0a7ef", "#91edc6", "#ffaaa8", "#bbc1ff", "#ffdf75"];
 
 const route = [];
 const edits = [];
@@ -29,6 +27,7 @@ const configurations = new Map();
 const drivingModels = new WeakMap();
 const vehiclesByFaction = new Map();
 const selectedVehicles = new Map();
+const comparisons = new Map();
 const routeEstimates = new Map();
 const terrainEdges = new Map();
 const keyboardPoint = { x: 0.5, y: 0.5 };
@@ -41,9 +40,6 @@ let left = 0;
 let mapTop = 0;
 let drawnWidth = 0;
 let drawnHeight = 0;
-let activeDrivingModel = null;
-let activeGroundVehicle = false;
-let activeTrackedVehicle = false;
 let terrainGrid = null;
 let terrainStatus = "unavailable";
 let selectedNode = null;
@@ -126,35 +122,85 @@ function selectFaction() {
 }
 
 function selectVehicle() {
-  const vehicle = vehicles[Number(vehicleSelect.value)];
-  selectedVehicles.set(vehicle.faction, vehicleSelect.value);
-  find("vehicle-detail").textContent = vehicle.type ?? "";
-  configurationSelect.replaceChildren();
+  selectedVehicles.set(factionSelect.value, vehicleSelect.value);
+  const added = comparisons.has(Number(vehicleSelect.value));
+  addVehicleButton.disabled = vehicleSelect.value === "" || added;
+  addVehicleButton.textContent = added ? "Added" : "Add vehicle";
+}
+
+function nextVehicleColor() {
+  const used = new Set([...comparisons.values()].map(({ color }) => color));
+  let color;
+  let index = 0;
+  do {
+    color = vehicleColors[index] ?? `hsl(${((index * 137.508) % 360).toFixed(2)} 85% 77%)`;
+    index++;
+  } while (used.has(color));
+  return color;
+}
+
+function refreshVehicleEstimate(index) {
+  for (const estimate of routeEstimates.values()) estimate.times.delete(index);
+  updateEstimate();
+}
+
+function addVehicle() {
+  const vehicleIndex = Number(vehicleSelect.value);
+  const vehicle = vehicles[vehicleIndex];
+  if (vehicleSelect.value === "" || !vehicle || comparisons.has(vehicleIndex)) return;
+  const card = find("vehicle-comparison-template").content.firstElementChild.cloneNode(true);
+  const color = nextVehicleColor();
+  const ground = vehicle.type !== "Helicopter" && vehicle.type !== "Boat";
+  const comparison = { vehicle, color, ground, card, model: null, speed: NaN, tracked: false };
+  card.style.setProperty("--vehicle-color", color);
+  card.querySelector(".vehicle-name").textContent = vehicle.name;
+  card.querySelector(".vehicle-detail").textContent = [vehicle.faction, vehicle.type].filter(Boolean).join(" · ");
+  const remove = card.querySelector(".remove-vehicle");
+  remove.setAttribute("aria-label", `Remove ${vehicle.name}, ${vehicle.faction}`);
+  remove.addEventListener("click", () => {
+    comparisons.delete(vehicleIndex);
+    card.remove();
+    selectVehicle();
+    vehicleSelect.focus();
+    refreshVehicleEstimate(vehicleIndex);
+  });
+
+  const configurationField = card.querySelector(".configuration-field");
+  const configurationSelect = configurationField.querySelector("select");
   for (const [index, profile] of (vehicle.drivingProfiles ?? []).entries()) {
     if (!drivingModels.has(profile)) drivingModels.set(profile, Driving.prepare(profile));
     if (drivingModels.get(profile)) configurationSelect.add(new Option(profile.name, index));
   }
-  const hasChoices = configurationSelect.options.length > 1;
-  configurationSelect.hidden = !hasChoices;
-  find("configuration-label").hidden = !hasChoices;
+  configurationField.hidden = configurationSelect.options.length < 2;
+  configurationSelect.setAttribute("aria-label", `${vehicle.name} configuration`);
   configurationSelect.value = configurations.get(vehicle.id) ?? configurationSelect.options[0]?.value ?? "";
-  selectConfiguration();
-}
-
-function selectConfiguration() {
-  const vehicle = vehicles[Number(vehicleSelect.value)];
-  const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
-  activeDrivingModel = profile ? drivingModels.get(profile) : null;
-  activeGroundVehicle = vehicle.type !== "Helicopter" && vehicle.type !== "Boat";
-  activeTrackedVehicle = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
-  speedLabel.hidden = speedField.hidden = speedInput.disabled = Boolean(activeDrivingModel);
-  speedLabel.textContent = activeGroundVehicle ? "Average speed on firm, flat ground" : "Average route speed";
-  speedInput.value = activeDrivingModel ? "" : (speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "");
-  find("speed-detail").textContent = activeDrivingModel
-    ? "SDK driving profile. Starts from rest and passes through each node."
-    : "Average-speed estimate.";
-  routeEstimates.clear();
-  updateEstimate();
+  const speedField = card.querySelector(".vehicle-speed");
+  const speedInput = speedField.querySelector("input");
+  const speedLabel = ground ? "Average speed on firm, flat ground" : "Average route speed";
+  speedField.querySelector(".vehicle-speed-label").textContent = speedLabel;
+  speedInput.setAttribute("aria-label", `${vehicle.name} ${speedLabel.toLowerCase()} in km/h`);
+  speedInput.value = speeds.get(vehicle.id) ?? vehicle.assumedSpeedKmh ?? "";
+  comparison.speed = speedInput.validity.valid ? speedInput.valueAsNumber : NaN;
+  speedInput.addEventListener("input", () => {
+    speeds.set(vehicle.id, speedInput.value);
+    comparison.speed = speedInput.validity.valid ? speedInput.valueAsNumber : NaN;
+    refreshVehicleEstimate(vehicleIndex);
+  });
+  const applyConfiguration = () => {
+    const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
+    comparison.model = profile ? drivingModels.get(profile) : null;
+    comparison.tracked = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
+    speedField.hidden = Boolean(comparison.model);
+    refreshVehicleEstimate(vehicleIndex);
+  };
+  configurationSelect.addEventListener("change", () => {
+    configurations.set(vehicle.id, configurationSelect.value);
+    applyConfiguration();
+  });
+  comparisons.set(vehicleIndex, comparison);
+  find("vehicle-comparisons").append(card);
+  selectVehicle();
+  applyConfiguration();
 }
 
 function formatDistance(meters) {
@@ -182,55 +228,73 @@ function samplePathTerrain(path, width, height) {
   return terrain;
 }
 
-function estimatePath(node, width, height, speed) {
+function estimatePath(node, width, height) {
+  const cached = routeEstimates.get(node);
+  const pending = [...comparisons].filter(([index]) => !cached?.times.has(index));
+  if (cached && !pending.length) return;
   const path = pathTo(node);
-  const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(path, width, height) : 0;
-  const { pieces, ...coverage } = distance > 0 && activeGroundVehicle && terrainGrid ? samplePathTerrain(path, width, height) : {};
-  let seconds = null;
-  if (distance > 0 && (activeDrivingModel || (speedInput.validity.valid && speed >= 0.1))) {
-    const conditions = coverage.sampledMeters ? Terrain.drivingConditions(pieces, activeTrackedVehicle) : null;
-    if (conditions) {
-      seconds = activeDrivingModel ? Driving.travelTerrainSeconds(conditions, activeDrivingModel) :
-        conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
-    } else {
-      seconds = activeDrivingModel ? Driving.travelSeconds(distance, activeDrivingModel) : RouteMath.travelSeconds(distance, speed);
+  const distance = cached?.distance ?? (width >= 1 && height >= 1 ? RouteMath.routeLength(path, width, height) : 0);
+  const useTerrain = distance > 0 && terrainGrid && pending.some(([, vehicle]) => vehicle.ground);
+  const { pieces, ...coverage } = useTerrain ? samplePathTerrain(path, width, height) : {};
+  const times = cached?.times ?? new Map();
+  const conditionsByDriveType = new Map();
+  for (const [index, { model, speed, ground, tracked }] of pending) {
+    let seconds = null;
+    if (distance > 0 && (model || speed >= 0.1)) {
+      if (ground && coverage.sampledMeters) {
+        if (!conditionsByDriveType.has(tracked)) conditionsByDriveType.set(tracked, Terrain.drivingConditions(pieces, tracked));
+        const conditions = conditionsByDriveType.get(tracked);
+        seconds = model ? Driving.travelTerrainSeconds(conditions, model) :
+          conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+      } else {
+        seconds = model ? Driving.travelSeconds(distance, model) : RouteMath.travelSeconds(distance, speed);
+      }
     }
+    times.set(index, seconds);
   }
-  return { distance, seconds, terrain: pieces ? coverage : null };
+  routeEstimates.set(node, { distance, times, terrain: pieces ? coverage : cached?.terrain });
 }
 
 function updateEstimate() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
-  const speed = speedInput.valueAsNumber;
-  for (const node of route) {
-    if (!routeEstimates.has(node)) routeEstimates.set(node, estimatePath(node, width, height, speed));
-  }
-  const { distance, seconds, terrain } = routeEstimates.get(selectedNode) ?? { distance: 0 };
+  for (const node of route) estimatePath(node, width, height);
+  const { distance, times, terrain } = routeEstimates.get(selectedNode) ?? { distance: 0 };
   const selectedNumber = route.indexOf(selectedNode) + 1;
   const estimatePathDetail = find("estimate-path");
   estimatePathDetail.hidden = !selectedNumber;
   estimatePathDetail.textContent = selectedNumber > 1 ? `Node 1 → Node ${selectedNumber}` : "Node 1";
   find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
-  const hasEstimate = seconds > 0 && Number.isFinite(seconds);
-  find("time").textContent = hasEstimate ? RouteMath.formatTime(seconds) : "—";
-  find("average-speed").textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h` : "—";
+  find("empty-vehicles").hidden = comparisons.size > 0;
+  for (const [index, { card, vehicle }] of comparisons) {
+    const seconds = times?.get(index);
+    const hasEstimate = seconds > 0 && Number.isFinite(seconds);
+    const eta = selectedNumber === 1 ? "0s" : hasEstimate ? RouteMath.formatTime(seconds) : "—";
+    const time = card.querySelector(".vehicle-time");
+    time.textContent = eta;
+    time.setAttribute("aria-label", `${vehicle.name} travel time ${eta}`);
+    const average = card.querySelector(".vehicle-average");
+    average.textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h avg` : "";
+  }
 
   const terrainDetail = find("terrain-detail");
-  if (activeGroundVehicle && terrain) {
+  const groundSelected = [...comparisons.values()].some(({ ground }) => ground);
+  if (groundSelected && terrain) {
     const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
     const water = terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
     terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
   } else {
     terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
   }
-  terrainDetail.hidden = !activeGroundVehicle || (!terrain && terrainStatus === "ready");
+  terrainDetail.hidden = !groundSelected || (!terrain && terrainStatus === "ready");
   renderRouteLabels();
   find("route-node-list").replaceChildren(...route.map((node, index) => {
     const item = document.createElement("li");
     const parent = node.parent ? `, connected to node ${route.indexOf(node.parent) + 1}` : ", start";
     const selection = node === selectedNode ? ", selected" : "";
-    item.textContent = `Node ${index + 1}${parent}${selection}, ${nodeTimeLabel(node)} elapsed`;
+    const elapsed = [...comparisons].map(([vehicleIndex, { vehicle }]) =>
+      `${vehicle.name} (${vehicle.faction}), ${nodeTimeLabel(node, vehicleIndex)} elapsed`);
+    item.textContent = [`Node ${index + 1}${parent}${selection}`, ...elapsed].join(". ");
     return item;
   }));
 }
@@ -252,9 +316,9 @@ function mapLabel(x, y, label, className) {
   return text;
 }
 
-function nodeTimeLabel(node) {
+function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
-  const seconds = routeEstimates.get(node)?.seconds;
+  const seconds = routeEstimates.get(node)?.times.get(vehicleIndex);
   return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
 }
 
@@ -268,10 +332,18 @@ function renderRouteLabels() {
     marker.setAttribute("cy", y);
     marker.setAttribute("r", 11);
     if (point === selectedNode) marker.setAttribute("class", "selected-node");
+    markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"));
+    const height = (comparisons.size - 1) * 15;
+    const startY = Math.max(8, Math.min(y - height / 2, drawnHeight - height - 8));
     const labelOnLeft = x > drawnWidth - 86;
-    const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), y, nodeTimeLabel(point), "node-time");
-    elapsed.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
-    markers.append(marker, mapLabel(x, y, String(index + 1), "node-number"), elapsed);
+    let row = 0;
+    for (const [vehicleIndex, { color }] of comparisons) {
+      const elapsed = mapLabel(x + (labelOnLeft ? -15 : 15), startY + row * 15, nodeTimeLabel(point, vehicleIndex), "node-time");
+      elapsed.setAttribute("text-anchor", labelOnLeft ? "end" : "start");
+      elapsed.style.color = color;
+      markers.append(elapsed);
+      row++;
+    }
   });
   find("markers").replaceChildren(markers);
 }
@@ -534,10 +606,7 @@ if (sdk?.maps.length && vehicles?.length) {
   mapSelect.addEventListener("change", selectMap);
   factionSelect.addEventListener("change", selectFaction);
   vehicleSelect.addEventListener("change", selectVehicle);
-  configurationSelect.addEventListener("change", () => {
-    configurations.set(vehicles[Number(vehicleSelect.value)].id, configurationSelect.value);
-    selectConfiguration();
-  });
+  addVehicleButton.addEventListener("click", addVehicle);
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
@@ -547,11 +616,6 @@ if (sdk?.maps.length && vehicles?.length) {
       updateEstimate();
     });
   }
-  speedInput.addEventListener("input", () => {
-    speeds.set(vehicles[Number(vehicleSelect.value)].id, speedInput.value);
-    routeEstimates.clear();
-    updateEstimate();
-  });
   find("draw").addEventListener("click", () => setMode("draw"));
   find("pan").addEventListener("click", () => setMode("pan"));
   find("undo").addEventListener("click", undo);
@@ -561,6 +625,7 @@ if (sdk?.maps.length && vehicles?.length) {
   find("zoom-fit").addEventListener("click", fitMap);
   new ResizeObserver(() => centerZoom(zoom)).observe(viewport);
   selectFaction();
+  addVehicle();
   selectMap();
 } else {
   for (const control of document.querySelectorAll("button, input, select")) control.disabled = true;

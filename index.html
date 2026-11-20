@@ -21,7 +21,7 @@
   </header>
   <main class="planner">
     <aside class="sidebar" aria-label="Route settings">
-      <section class="settings" aria-label="Map and vehicle">
+      <section class="settings" aria-label="Map and vehicles">
         <label for="map-select">Map</label>
         <select id="map-select" aria-describedby="map-detail"></select>
         <div class="detail" id="map-detail"></div>
@@ -35,24 +35,18 @@
         <label for="faction-select">Faction</label>
         <select id="faction-select"></select>
         <label for="vehicle-select">Vehicle</label>
-        <select id="vehicle-select" aria-describedby="vehicle-detail"></select>
-        <div class="detail" id="vehicle-detail"></div>
-        <label id="configuration-label" for="configuration" hidden>Vehicle configuration</label>
-        <select id="configuration" hidden></select>
-        <label id="speed-label" for="speed">Average route speed</label>
-        <div class="speed-field">
-          <input id="speed" type="number" min="0.1" step="any" inputmode="decimal" aria-describedby="speed-detail">
-          <span>km/h</span>
+        <div class="vehicle-picker">
+          <select id="vehicle-select"></select>
+          <button class="vehicle-action" id="add-vehicle" type="button">Add vehicle</button>
         </div>
-        <p class="detail" id="speed-detail"></p>
       </section>
       <section class="estimate" aria-labelledby="estimate-label">
         <h1 id="estimate-label">Estimated travel time</h1>
         <p class="detail" id="estimate-path" hidden></p>
-        <output class="time" id="time" aria-live="polite">—</output>
         <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
-        <div class="distance"><span>Estimated average speed</span><output id="average-speed">—</output></div>
         <p class="detail terrain-detail" id="terrain-detail" hidden></p>
+        <p class="detail" id="empty-vehicles" hidden>Add a vehicle to compare travel times.</p>
+        <ul class="vehicle-comparisons" id="vehicle-comparisons" aria-label="Selected vehicles"></ul>
       </section>
     </aside>
     <section class="map-panel" aria-labelledby="map-heading">
@@ -90,5 +84,23 @@
       </div>
     </section>
   </main>
+  <template id="vehicle-comparison-template">
+    <li class="vehicle-comparison">
+      <div class="vehicle-heading">
+        <strong class="vehicle-name"></strong>
+        <button class="vehicle-action remove-vehicle" type="button">Remove</button>
+      </div>
+      <p class="detail vehicle-detail"></p>
+      <label class="vehicle-setting configuration-field" hidden>Configuration <select></select></label>
+      <label class="vehicle-setting vehicle-speed" hidden>
+        <span class="vehicle-speed-label"></span>
+        <span class="speed-field"><input type="number" min="0.1" step="any" inputmode="decimal"><span>km/h</span></span>
+      </label>
+      <div class="vehicle-result">
+        <output class="vehicle-time" aria-live="polite">—</output>
+        <output class="detail vehicle-average">—</output>
+      </div>
+    </li>
+  </template>
 </body>
 </html>
