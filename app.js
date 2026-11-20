@@ -80,7 +80,6 @@ function selectMap() {
     Terrain.load(map).then((grid) => {
       if (request !== loadId) return;
       terrainGrid = grid;
-      routeTerrain = null;
       terrainStatus = "ready";
       updateEstimate();
     }).catch(() => {
@@ -137,11 +136,10 @@ function updateEstimate() {
   const height = heightInput.valueAsNumber;
   const speed = speedInput.valueAsNumber;
   const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(route, width, height) : 0;
-  const sampleGroundRoute = activeGroundVehicle && distance > 0 && (terrainGrid || activeDrivingModel);
-  if (sampleGroundRoute && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
-  const terrain = sampleGroundRoute && terrainGrid ? routeTerrain : null;
-  const conditions = sampleGroundRoute && (activeDrivingModel || terrain?.sampledMeters)
-    ? Terrain.drivingConditions(routeTerrain.pieces, activeTrackedVehicle) : null;
+  const useTerrain = activeGroundVehicle && terrainGrid && distance > 0;
+  if (useTerrain && !routeTerrain) routeTerrain = Terrain.sampleRoute(route, width, height, terrainGrid);
+  const terrain = useTerrain ? routeTerrain : null;
+  const conditions = terrain?.sampledMeters ? Terrain.drivingConditions(terrain.pieces, activeTrackedVehicle) : null;
   let seconds = 0;
   if (speedInput.validity.valid) {
     if (activeDrivingModel) {

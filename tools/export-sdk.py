@@ -211,13 +211,10 @@ def driving_profile(variant):
     if not any(key["nm"] > 0 for key in torque):
         return None
 
-    body = variant.get("body", {})
     tracks = variant.get("tracks")
-    steering_angle = 0
     if tracks:
         radius = tracks.get("sprocket_radius", 0) / 100
         brake_torque = 2 * tracks.get("brake_torque", 0)
-        friction = tracks.get("friction_multiplier", 0)
     else:
         wheels = variant.get("wheels", [])
         radii = {wheel.get("wheel_radius", 0) / 100 for wheel in wheels}
@@ -225,9 +222,6 @@ def driving_profile(variant):
             return None
         radius = next(iter(radii))
         brake_torque = sum(wheel.get("max_brake_torque", 0) for wheel in wheels)
-        steering_angle = max(wheel.get("max_steering_angle", 0) for wheel in wheels)
-        friction_values = [wheel["friction_multiplier"] for wheel in wheels if wheel.get("friction_multiplier", 0) > 0]
-        friction = sum(friction_values) / len(friction_values) if friction_values else 0
     if not (radius > 0 and brake_torque > 0):
         return None
 
@@ -251,9 +245,6 @@ def driving_profile(variant):
         "name": blueprint.removeprefix("BP_").removesuffix("_C").replace("_", " "),
         "massKg": mass,
         "tracked": bool(tracks),
-        "widthMeters": body.get("width", 0) / 100,
-        "steeringAngleDegrees": steering_angle,
-        "frictionMultiplier": friction,
         "radiusMeters": radius,
         "idleRpm": engine.get("idle_rpm", 0),
         "speedLimitKmh": speed_limit,
