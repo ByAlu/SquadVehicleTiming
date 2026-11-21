@@ -7,7 +7,6 @@ const mapSelect = find("map-select");
 const factionSelect = find("faction-select");
 const vehicleSelect = find("vehicle-select");
 const addVehicleButton = find("add-vehicle");
-const routingVehicle = find("routing-vehicle");
 const autoPathButton = find("auto-path");
 const removeAutoPathButton = find("remove-auto-path");
 const autoPathStatus = find("auto-path-status");
@@ -97,10 +96,12 @@ function selectMap() {
       terrainEdges.clear();
       routeEstimates.clear();
       updateEstimate();
+      updateButtons();
     }).catch(() => {
       if (request !== loadId) return;
       collisionStatus = "unavailable";
       updateEstimate();
+      updateButtons();
     });
     Terrain.load(map).then((grid) => {
       if (request !== loadId) return;
@@ -164,21 +165,13 @@ function nextVehicleColor() {
 }
 
 function refreshVehicleEstimate(index) {
-  for (const estimate of routeEstimates.values()) estimate.times.delete(index);
-  updateRoutingVehicles();
+  for (const estimates of routeEstimates.values()) estimates.delete(index);
   updateEstimate();
   updateButtons();
 }
 
-function updateRoutingVehicles() {
-  const previous = routingVehicle.value;
-  const options = [];
-  for (const [index, { vehicle, ground, model, speed }] of comparisons) {
-    if (ground && (model || speed >= 0.1)) options.push(new Option(`${vehicle.name} · ${vehicle.faction}`, index));
-  }
-  routingVehicle.replaceChildren(...(options.length ? options : [new Option("No ground vehicle", "")]));
-  routingVehicle.disabled = !options.length;
-  if (options.some((option) => option.value === previous)) routingVehicle.value = previous;
+function canAutoRoute({ ground, model, speed }) {
+  return ground && (model || speed >= 0.1);
 }
 
 function addVehicle() {
@@ -250,23 +243,24 @@ function pathTo(node) {
   return path.reverse();
 }
 
-function edgePoints(node) {
-  return [node.parent, ...(node.via ?? []), node];
+function edgePoints(node, via = []) {
+  return [node.parent, ...via, node];
 }
 
-function geometryFor(path) {
-  return path.flatMap((node) => [...(node.via ?? []), node]);
+function geometryFor(path, index) {
+  return path.flatMap((node) => [...(node.routes?.get(index) ?? []), node]);
 }
 
-function edgeCollision(node) {
-  if (!collisionEdges.has(node)) collisionEdges.set(node, Collision.path(edgePoints(node), collisionGrid));
-  return collisionEdges.get(node);
+function edgeCollision(node, via) {
+  const key = via?.length ? via : node;
+  if (!collisionEdges.has(key)) collisionEdges.set(key, Collision.path(edgePoints(node, via), collisionGrid));
+  return collisionEdges.get(key);
 }
 
-function pathCollision(path) {
+function pathCollision(path, index) {
   let status = "clear";
   for (const node of path.slice(1)) {
-    const edge = edgeCollision(node);
+    const edge = edgeCollision(node, node.routes?.get(index));
     if (edge === "blocked") return edge;
     if (edge === "unknown") status = edge;
   }
@@ -279,13 +273,15 @@ function sampleTerrain(points, width, height) {
   return Terrain.sampleRoute(points, width, height, terrainGrid, ground);
 }
 
-function samplePathTerrain(path, width, height) {
+function samplePathTerrain(path, index, width, height) {
   const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
   for (const node of path.slice(1)) {
-    if (!terrainEdges.has(node)) {
-      terrainEdges.set(node, sampleTerrain(edgePoints(node), width, height));
+    const via = node.routes?.get(index);
+    const key = via?.length ? via : node;
+    if (!terrainEdges.has(key)) {
+      terrainEdges.set(key, sampleTerrain(edgePoints(node, via), width, height));
     }
-    const edge = terrainEdges.get(node);
+    const edge = terrainEdges.get(key);
     terrain.pieces.push(...edge.pieces);
     terrain.sampledMeters += edge.sampledMeters;
     terrain.classifiedMeters += edge.classifiedMeters;
@@ -300,45 +296,41 @@ function timeForConditions(model, speed, conditions) {
 }
 
 function estimatePath(node, width, height) {
-  const cached = routeEstimates.get(node);
-  const pending = [...comparisons].filter(([index]) => !cached?.times.has(index));
-  if (cached && !pending.length) return;
+  const estimates = routeEstimates.get(node) ?? new Map();
+  const pending = [...comparisons].filter(([index]) => !estimates.has(index));
+  if (!pending.length) return;
   const path = pathTo(node);
-  const distance = cached?.distance ?? (width >= 1 && height >= 1 ? RouteMath.routeLength(geometryFor(path), width, height) : 0);
-  const collision = cached?.collision ?? pathCollision(path);
-  const useTerrain = distance > 0 && terrainGrid && pending.some(([, vehicle]) => vehicle.ground);
-  const { pieces, ...coverage } = useTerrain ? samplePathTerrain(path, width, height) : {};
-  const times = cached?.times ?? new Map();
-  const conditionsByDriveType = new Map();
   for (const [index, { model, speed, ground, tracked }] of pending) {
+    const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(geometryFor(path, index), width, height) : 0;
+    const collision = ground ? pathCollision(path, index) : null;
+    const { pieces, ...coverage } = distance > 0 && terrainGrid && ground ? samplePathTerrain(path, index, width, height) : {};
     let seconds = null;
     if (distance > 0 && !(ground && collision === "blocked") && (model || speed >= 0.1)) {
-      if (ground && coverage.sampledMeters) {
-        if (!conditionsByDriveType.has(tracked)) conditionsByDriveType.set(tracked, Terrain.drivingConditions(pieces, tracked));
-        const conditions = conditionsByDriveType.get(tracked);
-        seconds = timeForConditions(model, speed, conditions);
+      if (coverage.sampledMeters) {
+        seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
       } else {
         seconds = model ? Driving.travelSeconds(distance, model) : RouteMath.travelSeconds(distance, speed);
       }
     }
-    times.set(index, seconds);
+    estimates.set(index, { distance, seconds, collision, terrain: pieces ? coverage : null });
   }
-  routeEstimates.set(node, { distance, times, collision, terrain: pieces ? coverage : cached?.terrain });
+  routeEstimates.set(node, estimates);
 }
 
 function updateEstimate() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   for (const node of route) estimatePath(node, width, height);
-  const { distance, times, terrain, collision } = routeEstimates.get(selectedNode) ?? { distance: 0 };
+  const estimates = routeEstimates.get(selectedNode);
   const selectedNumber = route.indexOf(selectedNode) + 1;
   const estimatePathDetail = find("estimate-path");
   estimatePathDetail.hidden = !selectedNumber;
   estimatePathDetail.textContent = selectedNumber > 1 ? `Node 1 → Node ${selectedNumber}` : "Node 1";
-  find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
   find("empty-vehicles").hidden = comparisons.size > 0;
+  const checks = [];
   for (const [index, { card, vehicle, ground }] of comparisons) {
-    const seconds = times?.get(index);
+    const { distance, seconds, collision, terrain } = estimates?.get(index) ?? {};
+    if (ground && selectedNode?.parent) checks.push(collision);
     const hasEstimate = seconds > 0 && Number.isFinite(seconds);
     const eta = ground && collision === "blocked" ? "Blocked" : selectedNumber === 1 ? "0s" :
       hasEstimate ? RouteMath.formatTime(seconds) : "—";
@@ -347,25 +339,26 @@ function updateEstimate() {
     time.setAttribute("aria-label", `${vehicle.name} travel time ${eta}`);
     const average = card.querySelector(".vehicle-average");
     average.textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h avg` : "";
+    const distanceOutput = card.querySelector(".vehicle-distance");
+    distanceOutput.textContent = distance > 0 ? formatDistance(distance) : "";
+    const terrainDetail = card.querySelector(".vehicle-terrain");
+    terrainDetail.hidden = !ground || !selectedNode?.parent || (!terrain && terrainStatus === "ready");
+    if (terrain) {
+      const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
+      const water = terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
+      terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
+    } else {
+      terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
+    }
   }
-
-  const terrainDetail = find("terrain-detail");
-  const groundSelected = [...comparisons.values()].some(({ ground }) => ground);
-  if (groundSelected && terrain) {
-    const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
-    const water = terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
-    terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
-  } else {
-    terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
-  }
-  terrainDetail.hidden = !groundSelected || (!terrain && terrainStatus === "ready");
+  const collision = checks.includes("blocked") ? "blocked" : checks.includes("unknown") ? "unknown" : "clear";
   const collisionDetail = find("collision-detail");
-  collisionDetail.hidden = !groundSelected || !selectedNode?.parent;
-  collisionDetail.dataset.status = collision ?? "unknown";
+  collisionDetail.hidden = !checks.length;
+  collisionDetail.dataset.status = collision;
   const collisionMessages = {
     clear: "No blockers detected in sampled collision cells.",
-    blocked: "Vehicle collision detected on the selected route.",
-    unknown: "Part of this route has no collision sample.",
+    blocked: "Vehicle collision detected on at least one selected path.",
+    unknown: "Part of at least one selected path has no collision sample.",
   };
   collisionDetail.textContent = collisionGrid ? collisionMessages[collision] ?? "" :
     collisionStatus === "loading" ? "Loading collision data…" : "Collision data unavailable for this map.";
@@ -389,31 +382,37 @@ function updateButtons() {
   find("zoom-out").disabled = !drawnWidth || zoom <= 1;
   find("zoom-fit").disabled = !drawnWidth;
   const calibrated = widthInput.valueAsNumber >= 1 && heightInput.valueAsNumber >= 1;
-  autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || !routingVehicle.value || !calibrated;
-  removeAutoPathButton.hidden = !selectedNode?.via?.length;
+  const eligible = [...comparisons.values()].some(canAutoRoute);
+  autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || collisionStatus === "loading" || !eligible || !calibrated;
+  removeAutoPathButton.hidden = !selectedNode?.routes?.size;
   if (!selectedNode?.parent) autoPathStatus.textContent = "Select a child node to route from its parent.";
   else if (!terrainGrid) autoPathStatus.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Auto-routing needs terrain data for this map.";
-  else if (!routingVehicle.value) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
+  else if (collisionStatus === "loading") autoPathStatus.textContent = "Loading collision data…";
+  else if (!eligible) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
   else if (!calibrated) autoPathStatus.textContent = "Enter the map width and height to auto-route.";
-  else autoPathStatus.textContent = "Route the selected link from its parent.";
+  else autoPathStatus.textContent = "Find a route from the parent node for each selected ground vehicle.";
 }
 
-function setLinkWaypoints(node, via) {
-  edits.push({ rerouted: node, via: node.via, selection: node });
-  node.via = via.length ? via : undefined;
-  terrainEdges.delete(node);
-  collisionEdges.delete(node);
+function forgetAutoRoutes(node) {
+  for (const via of node.routes?.values() ?? []) {
+    terrainEdges.delete(via);
+    collisionEdges.delete(via);
+  }
   routeEstimates.clear();
+}
+
+function setLinkRoutes(node, routes) {
+  edits.push({ rerouted: node, routes: node.routes, selection: node });
+  forgetAutoRoutes(node);
+  node.routes = routes.size ? routes : undefined;
   routeChanged();
 }
 
 function autoRouteLink() {
   if (autoPathButton.disabled) return;
   const node = selectedNode;
-  const { vehicle, tracked, model, speed } = comparisons.get(Number(routingVehicle.value));
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
-  const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
   if (collisionGrid) {
     const endpoints = [node.parent, node];
     const unavailable = endpoints.findIndex((point) => Collision.segment(point, point, collisionGrid) !== "clear");
@@ -423,30 +422,55 @@ function autoRouteLink() {
       return;
     }
   }
-  const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
-  if (!result) {
+  const routes = new Map(node.routes);
+  const byDriveType = new Map();
+  let routed = 0;
+  let detours = 0;
+  let failures = 0;
+  let changed = false;
+  for (const [index, comparison] of comparisons) {
+    if (!canAutoRoute(comparison)) continue;
+    const { tracked, model, speed } = comparison;
+    if (!byDriveType.has(tracked)) {
+      // Top speed scales every search cost equally. The full timing model below
+      // can still prefer the straight link for an individual vehicle.
+      const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
+      const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
+      const straight = result?.direct && result.via.length ? sampleTerrain(edgePoints(node), width, height).pieces : null;
+      const detour = straight ? sampleTerrain(edgePoints(node, result.via), width, height).pieces : null;
+      byDriveType.set(tracked, { result, straight, detour });
+    }
+    const { result, straight, detour } = byDriveType.get(tracked);
+    if (!result) {
+      failures++;
+      continue;
+    }
+    let via = result.via;
+    if (straight) {
+      const travelTime = (pieces) => timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
+      if (travelTime(straight) <= travelTime(detour)) via = [];
+    }
+    routed++;
+    if (via.length) detours++;
+    const previous = routes.get(index);
+    if (!previous || previous.length !== via.length || previous.some(({ x, y }, point) => x !== via[point].x || y !== via[point].y)) {
+      routes.set(index, via);
+      changed = true;
+    }
+  }
+  if (!routed) {
     autoPathStatus.textContent = "No route found through sampled terrain and collision cells. Try a different pair of nodes.";
     return;
   }
-  let via = result.via;
-  if (result.direct && via.length) {
-    const travelTime = (points) => {
-      const { pieces } = sampleTerrain(points, width, height);
-      return timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
-    };
-    if (travelTime([node.parent, node]) <= travelTime([node.parent, ...via, node])) via = [];
-  }
-  const previous = node.via ?? [];
-  if (previous.length !== via.length || previous.some(({ x, y }, index) => x !== via[index].x || y !== via[index].y)) {
-    setLinkWaypoints(node, via);
-  }
-  autoPathStatus.textContent = via.length ? `Link routed for ${vehicle.name}.` : `Straight link is fastest for ${vehicle.name}.`;
+  if (changed) setLinkRoutes(node, routes);
+  const failed = failures ? ` No route for ${failures}.` : "";
+  autoPathStatus.textContent = `Routed ${routed} ground ${routed === 1 ? "vehicle" : "vehicles"}. ${detours} using a detour.${failed}`;
 }
 
 function removeAutoRoute() {
-  if (!selectedNode?.via?.length) return;
-  setLinkWaypoints(selectedNode, []);
-  autoPathStatus.textContent = "Auto-route removed. Link is straight.";
+  if (!selectedNode?.routes?.size) return;
+  setLinkRoutes(selectedNode, new Map());
+  autoPathStatus.textContent = "Auto-routes removed. The link is straight for every vehicle.";
   const focusTarget = autoPathButton.disabled ? viewport : autoPathButton;
   focusTarget.focus({ preventScroll: true });
 }
@@ -462,9 +486,9 @@ function mapLabel(x, y, label, className) {
 
 function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
-  const estimate = routeEstimates.get(node);
-  if (estimate?.collision === "blocked" && comparisons.get(vehicleIndex)?.ground) return "Blocked";
-  const seconds = estimate?.times.get(vehicleIndex);
+  const estimate = routeEstimates.get(node)?.get(vehicleIndex);
+  if (estimate?.collision === "blocked") return "Blocked";
+  const seconds = estimate?.seconds;
   return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
 }
 
@@ -497,14 +521,48 @@ function renderRouteLabels() {
 function renderRoute() {
   const position = ({ x, y }) => `${x * drawnWidth},${y * drawnHeight}`;
   const pathData = (points) => points.map((point, index) => `${index ? "L" : "M"}${position(point)}`).join(" ");
-  const branches = route.filter((node) => node.parent).map((node) => pathData(edgePoints(node))).join(" ");
-  const selected = pathData(geometryFor(pathTo(selectedNode)));
-  find("route-shadow").setAttribute("d", branches);
-  find("route-line").setAttribute("d", branches);
-  find("selected-route").setAttribute("d", selected);
-  const groundSelected = [...comparisons.values()].some(({ ground }) => ground);
-  const blocked = collisionGrid && groundSelected ? route.filter((node) => node.parent && edgeCollision(node) === "blocked") : [];
-  find("blocked-route").setAttribute("d", blocked.map((node) => pathData(edgePoints(node))).join(" "));
+  const selected = new Set(pathTo(selectedNode));
+  const manual = [];
+  const selectedManual = [];
+  const shadow = new Set();
+  const blocked = new Set();
+  const automatic = document.createDocumentFragment();
+  for (const node of route) {
+    if (!node.parent) continue;
+    const groups = new Map();
+    const straight = pathData(edgePoints(node));
+    let hasManual = !comparisons.size;
+    for (const [index, { color, ground }] of comparisons) {
+      const via = node.routes?.get(index);
+      const d = via ? pathData(edgePoints(node, via)) : straight;
+      if (via) {
+        const group = groups.get(d) ?? [];
+        group.push(color);
+        groups.set(d, group);
+      } else {
+        hasManual = true;
+      }
+      if (collisionGrid && ground && edgeCollision(node, via) === "blocked") blocked.add(d);
+    }
+    if (hasManual) {
+      manual.push(straight);
+      shadow.add(straight);
+      if (selected.has(node)) selectedManual.push(straight);
+    }
+    for (const [d, colors] of groups) {
+      shadow.add(d);
+      const edge = document.createElementNS(svgNamespace, "path");
+      edge.setAttribute("d", d);
+      edge.setAttribute("class", selected.has(node) ? "vehicle-route selected-vehicle-route" : "vehicle-route");
+      edge.style.color = colors.length === 1 ? colors[0] : "var(--accent)";
+      automatic.append(edge);
+    }
+  }
+  find("route-shadow").setAttribute("d", [...shadow].join(" "));
+  find("route-line").setAttribute("d", manual.join(" "));
+  find("selected-route").setAttribute("d", selectedManual.join(" "));
+  find("vehicle-routes").replaceChildren(automatic);
+  find("blocked-route").setAttribute("d", [...blocked].join(" "));
   cursor.setAttribute("cx", keyboardPoint.x * drawnWidth);
   cursor.setAttribute("cy", keyboardPoint.y * drawnHeight);
   cursor.setAttribute("visibility", keyboardActive ? "visible" : "hidden");
@@ -531,17 +589,15 @@ function clearRoute() {
 function undo() {
   finishGesture();
   if (!edits.length) return;
-  const { index, removed, children, selection, rerouted, via } = edits.pop();
+  const { index, removed, children, selection, rerouted, routes } = edits.pop();
   if (rerouted) {
-    rerouted.via = via;
-    routeEstimates.clear();
-    terrainEdges.delete(rerouted);
-    collisionEdges.delete(rerouted);
+    forgetAutoRoutes(rerouted);
+    rerouted.routes = routes;
   } else if (removed) {
     route.splice(index, 0, removed);
     for (const child of children) {
       child.node.parent = removed;
-      child.node.via = child.via;
+      child.node.routes = child.routes;
     }
     routeEstimates.clear();
     terrainEdges.clear();
@@ -640,10 +696,10 @@ function removeNodeAt(point) {
   const [removed] = route.splice(nearest, 1);
   const children = route.filter((node) => node.parent === removed);
   const parent = removed.parent ?? children[0] ?? null;
-  edits.push({ index: nearest, removed, children: children.map((node) => ({ node, via: node.via })), selection: selectedNode });
+  edits.push({ index: nearest, removed, children: children.map((node) => ({ node, routes: node.routes })), selection: selectedNode });
   for (const child of children) {
     child.parent = child === parent ? null : parent;
-    child.via = undefined;
+    child.routes = undefined;
   }
   if (selectedNode === removed) selectedNode = parent;
   routeEstimates.clear();
@@ -772,7 +828,6 @@ if (sdk?.maps.length && vehicles?.length) {
   addVehicleButton.addEventListener("click", addVehicle);
   autoPathButton.addEventListener("click", autoRouteLink);
   removeAutoPathButton.addEventListener("click", removeAutoRoute);
-  routingVehicle.addEventListener("change", updateButtons);
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);

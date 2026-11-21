@@ -41,19 +41,13 @@
           <select id="vehicle-select"></select>
           <button class="vehicle-action" id="add-vehicle" type="button">Add vehicle</button>
         </div>
-        <label for="routing-vehicle">Auto-route vehicle</label>
-        <div class="vehicle-picker">
-          <select id="routing-vehicle" aria-describedby="auto-path-status"></select>
-          <button class="vehicle-action" id="auto-path" type="button" disabled>Auto-route link</button>
-        </div>
+        <button class="vehicle-action" id="auto-path" type="button" aria-describedby="auto-path-status" disabled>Auto-route link</button>
         <button class="vehicle-action" id="remove-auto-path" type="button" hidden>Remove auto-route</button>
         <p class="detail" id="auto-path-status" role="status">Select a child node to route from its parent.</p>
       </section>
       <section class="estimate" aria-labelledby="estimate-label">
         <h1 id="estimate-label">Estimated travel time</h1>
         <p class="detail" id="estimate-path" hidden></p>
-        <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
-        <p class="detail terrain-detail" id="terrain-detail" hidden></p>
         <p class="detail collision-detail" id="collision-detail" role="status" hidden></p>
         <p class="detail" id="empty-vehicles" hidden>Add a vehicle to compare travel times.</p>
         <ul class="vehicle-comparisons" id="vehicle-comparisons" aria-label="Selected vehicles"></ul>
@@ -77,6 +71,7 @@
             <path id="route-shadow"></path>
             <path id="route-line"></path>
             <path id="selected-route"></path>
+            <g id="vehicle-routes"></g>
             <path id="blocked-route"></path>
             <g id="markers"></g>
             <circle id="cursor" r="7" visibility="hidden"></circle>
@@ -109,8 +104,12 @@
       </label>
       <div class="vehicle-result">
         <output class="vehicle-time" aria-live="polite">—</output>
-        <output class="detail vehicle-average">—</output>
+        <div class="vehicle-metrics">
+          <output class="detail vehicle-distance"></output>
+          <output class="detail vehicle-average"></output>
+        </div>
       </div>
+      <p class="detail vehicle-terrain" hidden></p>
     </li>
   </template>
 </body>
