@@ -9,6 +9,7 @@ const vehicleSelect = find("vehicle-select");
 const addVehicleButton = find("add-vehicle");
 const routingVehicle = find("routing-vehicle");
 const autoPathButton = find("auto-path");
+const removeAutoPathButton = find("remove-auto-path");
 const autoPathStatus = find("auto-path-status");
 const widthInput = find("width");
 const heightInput = find("height");
@@ -337,11 +338,20 @@ function updateButtons() {
   find("zoom-fit").disabled = !drawnWidth;
   const calibrated = widthInput.valueAsNumber >= 1 && heightInput.valueAsNumber >= 1;
   autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || !routingVehicle.value || !calibrated;
+  removeAutoPathButton.hidden = !selectedNode?.via?.length;
   if (!selectedNode?.parent) autoPathStatus.textContent = "Select a child node to route from its parent.";
   else if (!terrainGrid) autoPathStatus.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Auto-routing needs terrain data for this map.";
   else if (!routingVehicle.value) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
   else if (!calibrated) autoPathStatus.textContent = "Enter the map width and height to auto-route.";
   else autoPathStatus.textContent = "Route the selected link from its parent.";
+}
+
+function setLinkWaypoints(node, via) {
+  edits.push({ rerouted: node, via: node.via, selection: node });
+  node.via = via.length ? via : undefined;
+  terrainEdges.delete(node);
+  routeEstimates.clear();
+  routeChanged();
 }
 
 function autoRouteLink() {
@@ -366,13 +376,17 @@ function autoRouteLink() {
   }
   const previous = node.via ?? [];
   if (previous.length !== via.length || previous.some(({ x, y }, index) => x !== via[index].x || y !== via[index].y)) {
-    edits.push({ rerouted: node, via: node.via, selection: node });
-    node.via = via;
-    terrainEdges.delete(node);
-    routeEstimates.clear();
-    routeChanged();
+    setLinkWaypoints(node, via);
   }
   autoPathStatus.textContent = via.length ? `Link routed for ${vehicle.name}.` : `Straight link is fastest for ${vehicle.name}.`;
+}
+
+function removeAutoRoute() {
+  if (!selectedNode?.via?.length) return;
+  setLinkWaypoints(selectedNode, []);
+  autoPathStatus.textContent = "Auto-route removed. Link is straight.";
+  const focusTarget = autoPathButton.disabled ? viewport : autoPathButton;
+  focusTarget.focus({ preventScroll: true });
 }
 
 function mapLabel(x, y, label, className) {
@@ -686,6 +700,7 @@ if (sdk?.maps.length && vehicles?.length) {
   vehicleSelect.addEventListener("change", selectVehicle);
   addVehicleButton.addEventListener("click", addVehicle);
   autoPathButton.addEventListener("click", autoRouteLink);
+  removeAutoPathButton.addEventListener("click", removeAutoRoute);
   routingVehicle.addEventListener("change", updateButtons);
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
