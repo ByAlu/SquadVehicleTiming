@@ -55,7 +55,7 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 ## Vehicle collision data
 
-Logar Valley includes a collision grid. Export a grid for another calibrated map from the repository in PowerShell by passing its name to `-Map`.
+All 25 maps with a calibrated SDK gameplay layer include a collision grid at roughly 4 m spacing. To regenerate a grid, pass the map name to `-Map` from the repository in PowerShell. For a full refresh, use small batches so the SDK releases memory between runs.
 
 ```powershell
 .\tools\export-collision.ps1 -Map 'Logar Valley' -SpacingMeters 4
