@@ -531,9 +531,11 @@ function renderRoute() {
     if (!node.parent) continue;
     const groups = new Map();
     const straight = pathData(edgePoints(node));
+    const hasAutoRoute = [...comparisons.keys()].some((index) => node.routes?.has(index));
     let hasManual = !comparisons.size;
     for (const [index, { color, ground }] of comparisons) {
       const via = node.routes?.get(index);
+      if (!via && hasAutoRoute) continue;
       const d = via ? pathData(edgePoints(node, via)) : straight;
       if (via) {
         const group = groups.get(d) ?? [];
