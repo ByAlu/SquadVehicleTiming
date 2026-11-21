@@ -1,11 +1,14 @@
 """Export sampled vehicle collision cells from Squad gameplay worlds."""
 
+from array import array
+from base64 import b64encode
 import json
 import math
 import os
 from pathlib import Path
 import re
 import runpy
+import sys
 from tempfile import NamedTemporaryFile
 
 import unreal
@@ -50,7 +53,7 @@ def find_support(world, x, y, cache):
 def check_cell(world, x, y, dx, dy, cache):
     support = find_support(world, x, y, cache)
     if support is None:
-        return "?"
+        return "?", -32768
     z, normal, landscape = support
     # Raise the probe enough to clear the support plane at the uphill corner.
     rise = (abs(normal.x) * dx + abs(normal.y) * dy) / (2 * max(normal.z, 0.7))
@@ -60,7 +63,7 @@ def check_cell(world, x, y, dx, dy, cache):
     ignored = [landscape] if landscape else []
     hit = TRACE.box_trace_single_by_profile(world, center, end, extent, unreal.Rotator(), PROFILE,
                                            False, ignored, DEBUG, False)
-    return "#" if hit is not None and hit.to_tuple()[0] else "."
+    return ("#" if hit is not None and hit.to_tuple()[0] else "."), round(z / 10)
 
 
 def export_map(entry, spacing, collider_objects=False):
@@ -86,18 +89,26 @@ def export_map(entry, spacing, collider_objects=False):
                                       ROOT / "maps" / entry["name"] / "colliders.ndjson.gz")
         return
     rows = []
+    heights = array("h")
     cache = {}
     for row in range(row_count):
         y = y_min + (row + 0.5) * dy
-        rows.append("".join(check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache)
-                            for column in range(columns)))
+        cells = []
+        for column in range(columns):
+            status, height = check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache)
+            cells.append(status)
+            heights.append(height)
+        rows.append("".join(cells))
     blocked = sum(row.count("#") for row in rows)
     unknown = sum(row.count("?") for row in rows)
     if unknown == columns * row_count:
         raise RuntimeError(f"No support surfaces were found in {world_path}.")
+    if sys.byteorder != "little":
+        heights.byteswap()
     metadata = {"schemaVersion": 1, "map": entry["name"], "sourceWorld": world_path, "profile": PROFILE,
                 "grid": {"columns": columns, "rows": row_count, "columnSpacingMeters": dx / 100,
-                         "rowSpacingMeters": dy / 100}, "rows": rows}
+                         "rowSpacingMeters": dy / 100}, "rows": rows,
+                "elevationDmInt16Le": b64encode(heights.tobytes()).decode("ascii")}
     output = ROOT / "maps" / entry["name"] / "collision.js"
     with NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=output.parent, delete=False) as stream:
         temporary = Path(stream.name)

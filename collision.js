@@ -1,6 +1,19 @@
 "use strict";
 
 const Collision = (() => {
+  const elevationsByGrid = new WeakMap();
+
+  function elevations(data) {
+    if (!data?.elevationDmInt16Le) return null;
+    if (elevationsByGrid.has(data)) return elevationsByGrid.get(data);
+    const bytes = Uint8Array.from(atob(data.elevationDmInt16Le), (byte) => byte.charCodeAt(0));
+    if (bytes.length !== data.grid.columns * data.grid.rows * 2) throw new Error("Invalid collision elevations.");
+    const source = new DataView(bytes.buffer);
+    const heights = Int16Array.from({ length: bytes.length / 2 }, (_, index) => source.getInt16(index * 2, true));
+    elevationsByGrid.set(data, heights);
+    return heights;
+  }
+
   function load(map) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -8,10 +21,17 @@ const Collision = (() => {
       script.onload = () => {
         script.remove();
         const data = script.collisionData;
-        if (data?.map === map.name && data.schemaVersion === 1 && data.grid?.columns > 0 &&
-            data.rows?.length === data.grid.rows && data.rows.every((row) =>
-              typeof row === "string" && row.length === data.grid.columns && /^[.#?]+$/.test(row))) resolve(data);
-        else reject(new Error("Collision grid does not match the selected map."));
+        try {
+          if (data?.map !== map.name || data.schemaVersion !== 1 || !(data.grid?.columns > 0) ||
+              data.rows?.length !== data.grid.rows || !data.rows.every((row) =>
+                typeof row === "string" && row.length === data.grid.columns && /^[.#?]+$/.test(row))) {
+            throw new Error("Collision grid does not match the selected map.");
+          }
+          elevations(data);
+          resolve(data);
+        } catch (error) {
+          reject(error);
+        }
       };
       script.onerror = () => {
         script.remove();
@@ -81,7 +101,7 @@ const Collision = (() => {
     return status;
   }
 
-  return { load, segment, path };
+  return { load, segment, path, elevations };
 })();
 
 if (typeof module !== "undefined") module.exports = Collision;

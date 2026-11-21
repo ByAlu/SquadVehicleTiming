@@ -41,7 +41,10 @@ const AutoPath = (() => {
 
   function find(start, end, terrain, width, height, { tracked, speedKmh, collision }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
-    const { columns, rows } = terrain.grid;
+    const { columns, rows } = collision?.grid ?? terrain.grid;
+    const terrainColumns = Int32Array.from({ length: columns }, (_, x) => Math.floor((x + 0.5) * terrain.grid.columns / columns));
+    const terrainRows = Int32Array.from({ length: rows }, (_, y) => Math.floor((y + 0.5) * terrain.grid.rows / rows));
+    const heights = collisionMath.elevations(collision);
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
@@ -57,11 +60,30 @@ const AutoPath = (() => {
     const startId = startY * columns + startX;
     const endId = endY * columns + endX;
     const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
-    const blocked = (a, b) => collision && collisionMath.segment(a, b, collision) === "blocked";
+    const unsafe = (a, b) => collision && collisionMath.segment(a, b, collision) !== "clear";
+    const terrainAt = (x, y) => terrain.rows[terrainRows[y]]?.[terrainColumns[x]];
 
     function passable(x, y) {
-      const cell = terrain.rows[y]?.[x];
-      return cell && cellPace[cell[3]] > 0;
+      if (collision && collision.rows[y]?.[x] !== ".") return false;
+      const cell = terrainAt(x, y);
+      return cell ? cellPace[cell[3]] > 0 : Boolean(collision);
+    }
+
+    function gradeBetween(x, y, nx, ny, distance) {
+      if (heights) {
+        const from = heights[y * columns + x];
+        const to = heights[ny * columns + nx];
+        if (from !== -32768 && to !== -32768) return (to - from) / (10 * distance);
+      }
+      const from = terrainAt(x, y);
+      const to = terrainAt(nx, ny);
+      if (!from || !to) return 0;
+      const coarseDx = (terrainColumns[nx] - terrainColumns[x]) * width / terrain.grid.columns;
+      const coarseDy = (terrainRows[ny] - terrainRows[y]) * height / terrain.grid.rows;
+      if (coarseDx === 0 && coarseDy === 0) {
+        return ((from[1] ?? 0) * (nx - x) * dxMeters + (from[2] ?? 0) * (ny - y) * dyMeters) / (1000 * distance);
+      }
+      return (to[0] - from[0]) / (10 * Math.hypot(coarseDx, coarseDy));
     }
 
     function lowerBound(x, y) {
@@ -73,7 +95,7 @@ const AutoPath = (() => {
 
     function canStep(x, y, nx, ny, distance) {
       if (!passable(nx, ny) || (x !== nx && y !== ny && (!passable(nx, y) || !passable(x, ny)))) return false;
-      return Math.abs(terrain.rows[ny][nx][0] - terrain.rows[y][x][0]) <= 4.5 * distance;
+      return Math.abs(gradeBetween(x, y, nx, ny, distance)) <= 0.45;
     }
 
     function directPassable() {
@@ -100,9 +122,9 @@ const AutoPath = (() => {
     }
 
     if (!passable(startX, startY) || !passable(endX, endY)) return null;
-    const direct = !blocked(start, end) && directPassable();
+    const direct = !unsafe(start, end) && directPassable();
     const directResult = direct ? { via: [], direct: true } : null;
-    if (startId === endId || blocked(start, center(startX, startY)) || blocked(center(endX, endY), end)) return directResult;
+    if (startId === endId || unsafe(start, center(startX, startY)) || unsafe(center(endX, endY), end)) return directResult;
     const costs = new Float64Array(rows * columns).fill(Infinity);
     const previous = new Int32Array(costs.length).fill(-1);
     const visited = new Uint8Array(costs.length);
@@ -113,21 +135,24 @@ const AutoPath = (() => {
     while (queue.entries.length) {
       const { id } = queue.pop();
       if (visited[id]) continue;
-      if (id === endId) return { via: pathPoints(previous, endId, columns, rows, start, end), direct };
+      if (id === endId) {
+        const via = pathPoints(previous, endId, columns, rows, start, end);
+        return !collision || collisionMath.path([start, ...via, end], collision) === "clear" ? { via, direct } : directResult;
+      }
       visited[id] = 1;
       const x = id % columns;
       const y = Math.floor(id / columns);
-      const cell = terrain.rows[y][x];
+      const cell = terrainAt(x, y);
       for (const { dx, dy, distance } of steps) {
         const nx = x + dx;
         const ny = y + dy;
         if (!canStep(x, y, nx, ny, distance)) continue;
         const nextId = ny * columns + nx;
-        if (visited[nextId] || (collision && blocked(center(x, y), center(nx, ny)))) continue;
-        const next = terrain.rows[ny][nx];
-        const grade = (next[0] - cell[0]) / (10 * distance);
+        if (visited[nextId]) continue;
+        const next = terrainAt(nx, ny);
+        const grade = gradeBetween(x, y, nx, ny, distance);
         const pace = terrainMath.paceForGrade(grade, 1);
-        const resistance = (1 / cellPace[cell[3]] + 1 / cellPace[next[3]]) / 2;
+        const resistance = (1 / (cellPace[cell?.[3]] ?? 1) + 1 / (cellPace[next?.[3]] ?? 1)) / 2;
         const cost = costs[id] + distance * Math.hypot(1, grade) * resistance / (speed * pace);
         if (cost >= costs[nextId]) continue;
         costs[nextId] = cost;

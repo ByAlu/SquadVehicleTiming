@@ -32,8 +32,26 @@ const Terrain = (() => {
     return data;
   }
 
-  function sampleRoute(points, width, height, terrain) {
+  function groundGrade(x, y, ux, uy, width, height, ground) {
+    const { columns, rows } = ground.grid;
+    const column = Math.min(columns - 1, Math.floor(x * columns));
+    const row = Math.min(rows - 1, Math.floor(y * rows));
+    const at = (cx, cy) => cx >= 0 && cx < columns && cy >= 0 && cy < rows ? ground.heights[cy * columns + cx] : -32768;
+    const center = at(column, row);
+    if (center === -32768) return null;
+    const axis = (before, after, spacing) => {
+      if (before === -32768 && after === -32768) return 0;
+      if (before === -32768) return (after - center) / (10 * spacing);
+      if (after === -32768) return (center - before) / (10 * spacing);
+      return (after - before) / (20 * spacing);
+    };
+    return ux * axis(at(column - 1, row), at(column + 1, row), width / columns) +
+      uy * axis(at(column, row - 1), at(column, row + 1), height / rows);
+  }
+
+  function sampleRoute(points, width, height, terrain, ground = null) {
     const { columns, rows } = terrain.grid;
+    const sampleGrid = ground?.grid ?? terrain.grid;
     const sampleSpacing = Math.min(width / columns, height / rows);
     const pieces = [];
     let sampledMeters = 0;
@@ -53,13 +71,14 @@ const Terrain = (() => {
       if (!distance) continue;
       const ux = dx * width / distance;
       const uy = dy * height / distance;
-      const count = Math.max(1, Math.ceil(2 * Math.hypot(dx * columns, dy * rows)));
+      const count = Math.max(1, Math.ceil(2 * Math.hypot(dx * sampleGrid.columns, dy * sampleGrid.rows)));
       const horizontal = distance / count;
       for (let part = 0; part < count; part++) {
         const fraction = (part + 0.5) / count;
         const x = start.x + dx * fraction;
         const y = start.y + dy * fraction;
         const cell = sample(x, y);
+        const measuredGrade = ground ? groundGrade(x, y, ux, uy, width, height, ground) : null;
         let grade = 0;
         let surface = null;
         if (cell) {
@@ -67,7 +86,9 @@ const Terrain = (() => {
           surface = terrain.surfaces[cell[3]];
           if (isClassified(surface)) classifiedMeters += horizontal;
           if (surface.type === "Water") waterMeters += horizontal;
-          if (cell[1] !== null && cell[2] !== null) {
+          if (measuredGrade !== null) {
+            grade = measuredGrade;
+          } else if (cell[1] !== null && cell[2] !== null) {
             grade = (cell[1] * ux + cell[2] * uy) / 1000;
           } else {
             // Use nearby elevations when the trace did not have a usable normal.
@@ -77,6 +98,9 @@ const Terrain = (() => {
               grade = (after[0] - before[0]) / (20 * sampleSpacing);
             }
           }
+        } else if (measuredGrade !== null) {
+          sampledMeters += horizontal;
+          grade = measuredGrade;
         }
         grade = Math.max(-0.45, Math.min(0.45, grade));
         pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface });

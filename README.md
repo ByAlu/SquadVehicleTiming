@@ -61,7 +61,7 @@ Logar Valley includes a collision grid. Export a grid for another calibrated map
 .\tools\export-collision.ps1 -Map 'Logar Valley' -SpacingMeters 4
 ```
 
-The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified.
+The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified. The grid also stores the support elevation in decimeters for slope-aware routing and timing.
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 
@@ -83,7 +83,7 @@ The driving estimate starts at rest, accelerates at full throttle through the fo
 
 The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. Uphill grades reduce acceleration and speed. Downhill grades reduce braking and the target speed, with more acceleration available. Surface type and SDK material friction adjust speed and grip. Wheeled vehicles receive larger pace reductions on soft ground than tracked vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
 
-Auto-routing searches the terrain grid by estimated cruising time, using surface pace and elevation changes for the chosen vehicle. It excludes mapped water, missing terrain, steps steeper than a 45% grade, and known collision cells. If a direct link is passable, the planner compares it with the grid route using the vehicle timing model. The search still uses the coarser terrain grid for its waypoints, so it can miss narrow passages even where collision data is available.
+Auto-routing searches the collision grid where available and uses the terrain grid for surface pace. It minimizes estimated cruising time for the chosen vehicle while avoiding mapped water, blocked or unsampled collision cells, and steps steeper than a 45% grade. The finer grid lets it follow openings the terrain grid misses. On maps without a collision grid, the search uses the terrain grid. If a direct link is passable, the planner compares it with the grid route using the vehicle timing model.
 
 Surface and grade adjustments are estimates. The base model uses 85% drivetrain efficiency and a grip limit of 0.55 g on firm ground. Unknown material uses firm-ground grip, and gaps in terrain coverage use level ground. The app reports sampled and classified portions of the route. Obstacle clearance, water crossings, and turning speed require separate checks.
 

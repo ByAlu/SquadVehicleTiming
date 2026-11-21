@@ -94,6 +94,7 @@ function selectMap() {
       collisionGrid = grid;
       collisionStatus = "ready";
       collisionEdges.clear();
+      terrainEdges.clear();
       routeEstimates.clear();
       updateEstimate();
     }).catch(() => {
@@ -272,11 +273,17 @@ function pathCollision(path) {
   return status;
 }
 
+function sampleTerrain(points, width, height) {
+  const heights = Collision.elevations(collisionGrid);
+  const ground = heights ? { grid: collisionGrid.grid, heights } : null;
+  return Terrain.sampleRoute(points, width, height, terrainGrid, ground);
+}
+
 function samplePathTerrain(path, width, height) {
   const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
   for (const node of path.slice(1)) {
     if (!terrainEdges.has(node)) {
-      terrainEdges.set(node, Terrain.sampleRoute(edgePoints(node), width, height, terrainGrid));
+      terrainEdges.set(node, sampleTerrain(edgePoints(node), width, height));
     }
     const edge = terrainEdges.get(node);
     terrain.pieces.push(...edge.pieces);
@@ -407,6 +414,15 @@ function autoRouteLink() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
+  if (collisionGrid) {
+    const endpoints = [node.parent, node];
+    const unavailable = endpoints.findIndex((point) => Collision.segment(point, point, collisionGrid) !== "clear");
+    if (unavailable >= 0) {
+      const number = route.indexOf(endpoints[unavailable]) + 1;
+      autoPathStatus.textContent = `Node ${number} is in a blocked or unsampled collision cell. Place it on clear ground.`;
+      return;
+    }
+  }
   const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
   if (!result) {
     autoPathStatus.textContent = "No route found through sampled terrain and collision cells. Try a different pair of nodes.";
@@ -415,7 +431,7 @@ function autoRouteLink() {
   let via = result.via;
   if (result.direct && via.length) {
     const travelTime = (points) => {
-      const { pieces } = Terrain.sampleRoute(points, width, height, terrainGrid);
+      const { pieces } = sampleTerrain(points, width, height);
       return timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
     };
     if (travelTime([node.parent, node]) <= travelTime([node.parent, ...via, node])) via = [];
