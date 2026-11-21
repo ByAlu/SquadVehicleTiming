@@ -6,6 +6,7 @@ Open `index.html` in a browser. The planner runs locally using the bundled SDK c
 2. Click the minimap in Draw mode to add a numbered node. Select an existing node and click an empty spot to start a new branch from it. Right-click a node to remove it and reconnect its children to its parent. If you remove node 1, its first child becomes the new start. Undo reverses the last addition or removal.
 3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 4. Scroll over the map to zoom in or out around your pointer. Use Pan to move the map and the percentage button to fit the whole map again.
+5. To auto-route a link, select its destination node, choose a ground vehicle under **Auto-route vehicle**, and click **Auto-route link**. The link starts at the node's parent. The planner draws the resulting path and recomputes ETAs for all selected vehicles. Undo restores the previous link.
 
 ## Refresh the SDK data
 
@@ -61,6 +62,8 @@ Each node shows the elapsed travel time for every selected vehicle along its own
 The driving estimate starts at rest, accelerates at full throttle through the forward gears, and cruises if there is enough distance. The vehicle passes every node at the fastest speed the model allows, including the destination. The estimate uses the variant's engine torque curve, gearing, shift time, mass, wheel or sprocket radius, and brake torque. The gearing limit caps the modeled speed.
 
 The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. Uphill grades reduce acceleration and speed. Downhill grades reduce braking and the target speed, with more acceleration available. Surface type and SDK material friction adjust speed and grip. Wheeled vehicles receive larger pace reductions on soft ground than tracked vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
+
+Auto-routing searches the terrain grid by estimated cruising time, using surface pace and elevation changes for the chosen vehicle. It excludes mapped water, missing terrain, and steps steeper than a 45% grade. If a direct link is passable, the planner compares it with the grid route using the vehicle timing model. The terrain grid cannot verify clearance around obstacles or detect every water crossing.
 
 Surface and grade adjustments are estimates. The base model uses 85% drivetrain efficiency and a grip limit of 0.55 g on firm ground. Unknown material uses firm-ground grip, and gaps in terrain coverage use level ground. The app reports sampled and classified portions of the route. Obstacle clearance, water crossings, and turning speed require separate checks.
 

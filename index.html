@@ -11,6 +11,7 @@
   <script src="route.js" defer></script>
   <script src="driving.js" defer></script>
   <script src="terrain.js" defer></script>
+  <script src="auto-path.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -39,6 +40,12 @@
           <select id="vehicle-select"></select>
           <button class="vehicle-action" id="add-vehicle" type="button">Add vehicle</button>
         </div>
+        <label for="routing-vehicle">Auto-route vehicle</label>
+        <div class="vehicle-picker">
+          <select id="routing-vehicle" aria-describedby="auto-path-status"></select>
+          <button class="vehicle-action" id="auto-path" type="button" disabled>Auto-route link</button>
+        </div>
+        <p class="detail" id="auto-path-status" role="status">Select a child node to route from its parent.</p>
       </section>
       <section class="estimate" aria-labelledby="estimate-label">
         <h1 id="estimate-label">Estimated travel time</h1>

@@ -89,18 +89,25 @@ const Terrain = (() => {
     return surface && surface.type !== "Unknown" && surface.type !== "Default";
   }
 
+  function paceForGrade(grade, surfacePace) {
+    return surfacePace / (1 + 4 * Math.max(0, grade) + 1.25 * Math.max(0, -grade));
+  }
+
+  function paceForSurface(surface, tracked) {
+    return surfacePace[surface?.type]?.[tracked ? 1 : 0] ?? 1;
+  }
+
   function drivingConditions(pieces, tracked) {
     return pieces.map(({ distance, grade, surface }) => {
-      const pace = surfacePace[surface?.type]?.[tracked ? 1 : 0] ?? 1;
+      const pace = paceForSurface(surface, tracked);
       const friction = isClassified(surface) && surface.type !== "Water" && Number.isFinite(surface.friction)
         ? Math.sqrt(Math.max(0.25, Math.min(1, surface.friction / 0.95)))
         : 1;
-      const gradePace = 1 / (1 + 4 * Math.max(0, grade) + 1.25 * Math.max(0, -grade));
-      return { distance, grade, speedFactor: pace * gradePace, powerFactor: pace * friction, gripFactor: friction };
+      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace * friction, gripFactor: friction };
     });
   }
 
-  return { load, sampleRoute, drivingConditions };
+  return { load, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 
 if (typeof module !== "undefined") module.exports = Terrain;

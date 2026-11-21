@@ -7,6 +7,9 @@ const mapSelect = find("map-select");
 const factionSelect = find("faction-select");
 const vehicleSelect = find("vehicle-select");
 const addVehicleButton = find("add-vehicle");
+const routingVehicle = find("routing-vehicle");
+const autoPathButton = find("auto-path");
+const autoPathStatus = find("auto-path-status");
 const widthInput = find("width");
 const heightInput = find("height");
 const viewport = find("viewport");
@@ -86,10 +89,12 @@ function selectMap() {
       terrainStatus = "ready";
       routeEstimates.clear();
       updateEstimate();
+      updateButtons();
     }).catch(() => {
       if (request !== loadId) return;
       terrainStatus = "unavailable";
       updateEstimate();
+      updateButtons();
     });
   }
 }
@@ -141,7 +146,20 @@ function nextVehicleColor() {
 
 function refreshVehicleEstimate(index) {
   for (const estimate of routeEstimates.values()) estimate.times.delete(index);
+  updateRoutingVehicles();
   updateEstimate();
+  updateButtons();
+}
+
+function updateRoutingVehicles() {
+  const previous = routingVehicle.value;
+  const options = [];
+  for (const [index, { vehicle, ground, model, speed }] of comparisons) {
+    if (ground && (model || speed >= 0.1)) options.push(new Option(`${vehicle.name} · ${vehicle.faction}`, index));
+  }
+  routingVehicle.replaceChildren(...(options.length ? options : [new Option("No ground vehicle", "")]));
+  routingVehicle.disabled = !options.length;
+  if (options.some((option) => option.value === previous)) routingVehicle.value = previous;
 }
 
 function addVehicle() {
@@ -213,11 +231,19 @@ function pathTo(node) {
   return path.reverse();
 }
 
+function edgePoints(node) {
+  return [node.parent, ...(node.via ?? []), node];
+}
+
+function geometryFor(path) {
+  return path.flatMap((node) => [...(node.via ?? []), node]);
+}
+
 function samplePathTerrain(path, width, height) {
   const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
   for (const node of path.slice(1)) {
     if (!terrainEdges.has(node)) {
-      terrainEdges.set(node, Terrain.sampleRoute([node.parent, node], width, height, terrainGrid));
+      terrainEdges.set(node, Terrain.sampleRoute(edgePoints(node), width, height, terrainGrid));
     }
     const edge = terrainEdges.get(node);
     terrain.pieces.push(...edge.pieces);
@@ -228,12 +254,17 @@ function samplePathTerrain(path, width, height) {
   return terrain;
 }
 
+function timeForConditions(model, speed, conditions) {
+  return model ? Driving.travelTerrainSeconds(conditions, model) :
+    conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+}
+
 function estimatePath(node, width, height) {
   const cached = routeEstimates.get(node);
   const pending = [...comparisons].filter(([index]) => !cached?.times.has(index));
   if (cached && !pending.length) return;
   const path = pathTo(node);
-  const distance = cached?.distance ?? (width >= 1 && height >= 1 ? RouteMath.routeLength(path, width, height) : 0);
+  const distance = cached?.distance ?? (width >= 1 && height >= 1 ? RouteMath.routeLength(geometryFor(path), width, height) : 0);
   const useTerrain = distance > 0 && terrainGrid && pending.some(([, vehicle]) => vehicle.ground);
   const { pieces, ...coverage } = useTerrain ? samplePathTerrain(path, width, height) : {};
   const times = cached?.times ?? new Map();
@@ -244,8 +275,7 @@ function estimatePath(node, width, height) {
       if (ground && coverage.sampledMeters) {
         if (!conditionsByDriveType.has(tracked)) conditionsByDriveType.set(tracked, Terrain.drivingConditions(pieces, tracked));
         const conditions = conditionsByDriveType.get(tracked);
-        seconds = model ? Driving.travelTerrainSeconds(conditions, model) :
-          conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+        seconds = timeForConditions(model, speed, conditions);
       } else {
         seconds = model ? Driving.travelSeconds(distance, model) : RouteMath.travelSeconds(distance, speed);
       }
@@ -305,6 +335,44 @@ function updateButtons() {
   find("zoom-in").disabled = !drawnWidth || zoom >= 7;
   find("zoom-out").disabled = !drawnWidth || zoom <= 1;
   find("zoom-fit").disabled = !drawnWidth;
+  const calibrated = widthInput.valueAsNumber >= 1 && heightInput.valueAsNumber >= 1;
+  autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || !routingVehicle.value || !calibrated;
+  if (!selectedNode?.parent) autoPathStatus.textContent = "Select a child node to route from its parent.";
+  else if (!terrainGrid) autoPathStatus.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Auto-routing needs terrain data for this map.";
+  else if (!routingVehicle.value) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
+  else if (!calibrated) autoPathStatus.textContent = "Enter the map width and height to auto-route.";
+  else autoPathStatus.textContent = "Route the selected link from its parent.";
+}
+
+function autoRouteLink() {
+  if (autoPathButton.disabled) return;
+  const node = selectedNode;
+  const { vehicle, tracked, model, speed } = comparisons.get(Number(routingVehicle.value));
+  const width = widthInput.valueAsNumber;
+  const height = heightInput.valueAsNumber;
+  const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
+  const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh });
+  if (!result) {
+    autoPathStatus.textContent = "No route found through sampled terrain. Try a different pair of nodes.";
+    return;
+  }
+  let via = result.via;
+  if (result.direct && via.length) {
+    const travelTime = (points) => {
+      const { pieces } = Terrain.sampleRoute(points, width, height, terrainGrid);
+      return timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
+    };
+    if (travelTime([node.parent, node]) <= travelTime([node.parent, ...via, node])) via = [];
+  }
+  const previous = node.via ?? [];
+  if (previous.length !== via.length || previous.some(({ x, y }, index) => x !== via[index].x || y !== via[index].y)) {
+    edits.push({ rerouted: node, via: node.via, selection: node });
+    node.via = via;
+    terrainEdges.delete(node);
+    routeEstimates.clear();
+    routeChanged();
+  }
+  autoPathStatus.textContent = via.length ? `Link routed for ${vehicle.name}.` : `Straight link is fastest for ${vehicle.name}.`;
 }
 
 function mapLabel(x, y, label, className) {
@@ -350,9 +418,9 @@ function renderRouteLabels() {
 
 function renderRoute() {
   const position = ({ x, y }) => `${x * drawnWidth},${y * drawnHeight}`;
-  const branches = route.filter((node) => node.parent).map((node) => `M${position(node.parent)} L${position(node)}`).join(" ");
-  const selectedPath = pathTo(selectedNode);
-  const selected = selectedPath.map((node, index) => `${index ? "L" : "M"}${position(node)}`).join(" ");
+  const pathData = (points) => points.map((point, index) => `${index ? "L" : "M"}${position(point)}`).join(" ");
+  const branches = route.filter((node) => node.parent).map((node) => pathData(edgePoints(node))).join(" ");
+  const selected = pathData(geometryFor(pathTo(selectedNode)));
   find("route-shadow").setAttribute("d", branches);
   find("route-line").setAttribute("d", branches);
   find("selected-route").setAttribute("d", selected);
@@ -382,10 +450,17 @@ function clearRoute() {
 function undo() {
   finishGesture();
   if (!edits.length) return;
-  const { index, removed, children, selection } = edits.pop();
-  if (removed) {
+  const { index, removed, children, selection, rerouted, via } = edits.pop();
+  if (rerouted) {
+    rerouted.via = via;
+    routeEstimates.clear();
+    terrainEdges.delete(rerouted);
+  } else if (removed) {
     route.splice(index, 0, removed);
-    for (const child of children) child.parent = removed;
+    for (const child of children) {
+      child.node.parent = removed;
+      child.node.via = child.via;
+    }
     routeEstimates.clear();
     terrainEdges.clear();
   } else {
@@ -481,8 +556,11 @@ function removeNodeAt(point) {
   const [removed] = route.splice(nearest, 1);
   const children = route.filter((node) => node.parent === removed);
   const parent = removed.parent ?? children[0] ?? null;
-  edits.push({ index: nearest, removed, children, selection: selectedNode });
-  for (const child of children) child.parent = child === parent ? null : parent;
+  edits.push({ index: nearest, removed, children: children.map((node) => ({ node, via: node.via })), selection: selectedNode });
+  for (const child of children) {
+    child.parent = child === parent ? null : parent;
+    child.via = undefined;
+  }
   if (selectedNode === removed) selectedNode = parent;
   routeEstimates.clear();
   terrainEdges.clear();
@@ -607,6 +685,8 @@ if (sdk?.maps.length && vehicles?.length) {
   factionSelect.addEventListener("change", selectFaction);
   vehicleSelect.addEventListener("change", selectVehicle);
   addVehicleButton.addEventListener("click", addVehicle);
+  autoPathButton.addEventListener("click", autoRouteLink);
+  routingVehicle.addEventListener("change", updateButtons);
   for (const input of [widthInput, heightInput]) {
     input.addEventListener("input", () => {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
@@ -614,6 +694,7 @@ if (sdk?.maps.length && vehicles?.length) {
       terrainEdges.clear();
       updateMapDetail();
       updateEstimate();
+      updateButtons();
     });
   }
   find("draw").addEventListener("click", () => setMode("draw"));
