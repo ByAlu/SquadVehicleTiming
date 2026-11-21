@@ -166,12 +166,9 @@ function nextVehicleColor() {
 
 function refreshVehicleEstimate(index) {
   for (const estimates of routeEstimates.values()) estimates.delete(index);
+  for (const node of route) node.autoRoute?.choices.delete(index);
   updateEstimate();
   updateButtons();
-}
-
-function canAutoRoute({ ground, model, speed }) {
-  return ground && (model || speed >= 0.1);
 }
 
 function addVehicle() {
@@ -247,8 +244,34 @@ function edgePoints(node, via = []) {
   return [node.parent, ...via, node];
 }
 
+function waypointsFor(node, index) {
+  const auto = node.autoRoute;
+  if (!auto) return undefined;
+  if (auto.choices.has(index)) return auto.choices.get(index);
+  const { ground, model, speed, tracked } = comparisons.get(index);
+  const width = widthInput.valueAsNumber;
+  const height = heightInput.valueAsNumber;
+  const useDrivingTime = ground && terrainGrid && (model || speed >= 0.1);
+  let best = auto.options[0];
+  if (auto.options.length > 1 && width >= 1 && height >= 1) {
+    const cost = (via) => useDrivingTime
+      ? timeForConditions(model, speed, Terrain.drivingConditions(sampleEdge(node, via, width, height).pieces, tracked))
+      : RouteMath.routeLength(edgePoints(node, via), width, height);
+    let minimum = Infinity;
+    for (const via of auto.options) {
+      const secondsOrDistance = cost(via);
+      if (secondsOrDistance < minimum) {
+        best = via;
+        minimum = secondsOrDistance;
+      }
+    }
+  }
+  auto.choices.set(index, best);
+  return best;
+}
+
 function geometryFor(path, index) {
-  return path.flatMap((node) => [...(node.routes?.get(index) ?? []), node]);
+  return path.flatMap((node) => [...(waypointsFor(node, index) ?? []), node]);
 }
 
 function edgeCollision(node, via) {
@@ -260,7 +283,7 @@ function edgeCollision(node, via) {
 function pathCollision(path, index) {
   let status = "clear";
   for (const node of path.slice(1)) {
-    const edge = edgeCollision(node, node.routes?.get(index));
+    const edge = edgeCollision(node, waypointsFor(node, index));
     if (edge === "blocked") return edge;
     if (edge === "unknown") status = edge;
   }
@@ -273,15 +296,16 @@ function sampleTerrain(points, width, height) {
   return Terrain.sampleRoute(points, width, height, terrainGrid, ground);
 }
 
+function sampleEdge(node, via, width, height) {
+  const key = via?.length ? via : node;
+  if (!terrainEdges.has(key)) terrainEdges.set(key, sampleTerrain(edgePoints(node, via), width, height));
+  return terrainEdges.get(key);
+}
+
 function samplePathTerrain(path, index, width, height) {
   const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
   for (const node of path.slice(1)) {
-    const via = node.routes?.get(index);
-    const key = via?.length ? via : node;
-    if (!terrainEdges.has(key)) {
-      terrainEdges.set(key, sampleTerrain(edgePoints(node, via), width, height));
-    }
-    const edge = terrainEdges.get(key);
+    const edge = sampleEdge(node, waypointsFor(node, index), width, height);
     terrain.pieces.push(...edge.pieces);
     terrain.sampledMeters += edge.sampledMeters;
     terrain.classifiedMeters += edge.classifiedMeters;
@@ -382,30 +406,33 @@ function updateButtons() {
   find("zoom-out").disabled = !drawnWidth || zoom <= 1;
   find("zoom-fit").disabled = !drawnWidth;
   const calibrated = widthInput.valueAsNumber >= 1 && heightInput.valueAsNumber >= 1;
-  const eligible = [...comparisons.values()].some(canAutoRoute);
-  autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || collisionStatus === "loading" || !eligible || !calibrated;
-  removeAutoPathButton.hidden = !selectedNode?.routes?.size;
+  autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || collisionStatus === "loading" || !comparisons.size || !calibrated;
+  removeAutoPathButton.hidden = !selectedNode?.autoRoute;
   if (!selectedNode?.parent) autoPathStatus.textContent = "Select a child node to route from its parent.";
   else if (!terrainGrid) autoPathStatus.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Auto-routing needs terrain data for this map.";
   else if (collisionStatus === "loading") autoPathStatus.textContent = "Loading collision data…";
-  else if (!eligible) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
+  else if (!comparisons.size) autoPathStatus.textContent = "Add a vehicle to auto-route.";
   else if (!calibrated) autoPathStatus.textContent = "Enter the map width and height to auto-route.";
-  else autoPathStatus.textContent = "Find a route from the parent node for each selected ground vehicle.";
+  else autoPathStatus.textContent = "Find a route from the parent node for all selected vehicles.";
 }
 
 function forgetAutoRoutes(node) {
-  for (const via of node.routes?.values() ?? []) {
+  for (const via of node.autoRoute?.options ?? []) {
     terrainEdges.delete(via);
     collisionEdges.delete(via);
   }
   routeEstimates.clear();
 }
 
-function setLinkRoutes(node, routes) {
-  edits.push({ rerouted: node, routes: node.routes, selection: node });
+function setLinkAutoRoute(node, autoRoute) {
+  edits.push({ rerouted: node, autoRoute: node.autoRoute, selection: node });
   forgetAutoRoutes(node);
-  node.routes = routes.size ? routes : undefined;
+  node.autoRoute = autoRoute;
   routeChanged();
+}
+
+function sameWaypoints(first, second) {
+  return first.length === second.length && first.every(({ x, y }, index) => x === second[index].x && y === second[index].y);
 }
 
 function autoRouteLink() {
@@ -422,54 +449,33 @@ function autoRouteLink() {
       return;
     }
   }
-  const routes = new Map(node.routes);
-  const byDriveType = new Map();
-  let routed = 0;
-  let detours = 0;
-  let failures = 0;
-  let changed = false;
-  for (const [index, comparison] of comparisons) {
-    if (!canAutoRoute(comparison)) continue;
-    const { tracked, model, speed } = comparison;
-    if (!byDriveType.has(tracked)) {
-      // Top speed scales every search cost equally. The full timing model below
-      // can still prefer the straight link for an individual vehicle.
-      const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
-      const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
-      const straight = result?.direct && result.via.length ? sampleTerrain(edgePoints(node), width, height).pieces : null;
-      const detour = straight ? sampleTerrain(edgePoints(node, result.via), width, height).pieces : null;
-      byDriveType.set(tracked, { result, straight, detour });
-    }
-    const { result, straight, detour } = byDriveType.get(tracked);
-    if (!result) {
-      failures++;
-      continue;
-    }
-    let via = result.via;
-    if (straight) {
-      const travelTime = (pieces) => timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
-      if (travelTime(straight) <= travelTime(detour)) via = [];
-    }
-    routed++;
-    if (via.length) detours++;
-    const previous = routes.get(index);
-    if (!previous || previous.length !== via.length || previous.some(({ x, y }, point) => x !== via[point].x || y !== via[point].y)) {
-      routes.set(index, via);
-      changed = true;
-    }
+  const options = [];
+  const addOption = (via) => {
+    if (!options.some((option) => sameWaypoints(option, via))) options.push(via);
+  };
+  // A uniform top speed scales all search costs equally. Each vehicle then
+  // selects among the candidates using its own timing model.
+  for (const tracked of [false, true]) {
+    const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh: 3.6, collision: collisionGrid });
+    if (!result) continue;
+    addOption(result.via);
+    if (result.direct) addOption([]);
   }
-  if (!routed) {
+  if (!options.length) {
     autoPathStatus.textContent = "No route found through sampled terrain and collision cells. Try a different pair of nodes.";
     return;
   }
-  if (changed) setLinkRoutes(node, routes);
-  const failed = failures ? ` No route for ${failures}.` : "";
-  autoPathStatus.textContent = `Routed ${routed} ground ${routed === 1 ? "vehicle" : "vehicles"}. ${detours} using a detour.${failed}`;
+  const previous = node.autoRoute?.options ?? [];
+  if (options.length !== previous.length || options.some((via, index) => !sameWaypoints(via, previous[index]))) {
+    setLinkAutoRoute(node, { options, choices: new Map() });
+  }
+  const count = comparisons.size;
+  autoPathStatus.textContent = `Auto-route applied to ${count} ${count === 1 ? "vehicle" : "vehicles"}.`;
 }
 
 function removeAutoRoute() {
-  if (!selectedNode?.routes?.size) return;
-  setLinkRoutes(selectedNode, new Map());
+  if (!selectedNode?.autoRoute) return;
+  setLinkAutoRoute(selectedNode, undefined);
   autoPathStatus.textContent = "Auto-routes removed. The link is straight for every vehicle.";
   const focusTarget = autoPathButton.disabled ? viewport : autoPathButton;
   focusTarget.focus({ preventScroll: true });
@@ -531,11 +537,10 @@ function renderRoute() {
     if (!node.parent) continue;
     const groups = new Map();
     const straight = pathData(edgePoints(node));
-    const hasAutoRoute = [...comparisons.keys()].some((index) => node.routes?.has(index));
-    let hasManual = !comparisons.size;
+    let hasManual = !comparisons.size && !node.autoRoute;
+    if (!comparisons.size && node.autoRoute) groups.set(pathData(edgePoints(node, node.autoRoute.options[0])), []);
     for (const [index, { color, ground }] of comparisons) {
-      const via = node.routes?.get(index);
-      if (!via && hasAutoRoute) continue;
+      const via = waypointsFor(node, index);
       const d = via ? pathData(edgePoints(node, via)) : straight;
       if (via) {
         const group = groups.get(d) ?? [];
@@ -591,15 +596,18 @@ function clearRoute() {
 function undo() {
   finishGesture();
   if (!edits.length) return;
-  const { index, removed, children, selection, rerouted, routes } = edits.pop();
+  const { index, removed, children, selection, rerouted, autoRoute } = edits.pop();
   if (rerouted) {
     forgetAutoRoutes(rerouted);
-    rerouted.routes = routes;
+    rerouted.autoRoute = autoRoute;
+    autoRoute?.choices.clear();
   } else if (removed) {
     route.splice(index, 0, removed);
+    removed.autoRoute?.choices.clear();
     for (const child of children) {
       child.node.parent = removed;
-      child.node.routes = child.routes;
+      child.node.autoRoute = child.autoRoute;
+      child.autoRoute?.choices.clear();
     }
     routeEstimates.clear();
     terrainEdges.clear();
@@ -698,10 +706,10 @@ function removeNodeAt(point) {
   const [removed] = route.splice(nearest, 1);
   const children = route.filter((node) => node.parent === removed);
   const parent = removed.parent ?? children[0] ?? null;
-  edits.push({ index: nearest, removed, children: children.map((node) => ({ node, routes: node.routes })), selection: selectedNode });
+  edits.push({ index: nearest, removed, children: children.map((node) => ({ node, autoRoute: node.autoRoute })), selection: selectedNode });
   for (const child of children) {
     child.parent = child === parent ? null : parent;
-    child.routes = undefined;
+    child.autoRoute = undefined;
   }
   if (selectedNode === removed) selectedNode = parent;
   routeEstimates.clear();
@@ -835,6 +843,7 @@ if (sdk?.maps.length && vehicles?.length) {
       scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
       routeEstimates.clear();
       terrainEdges.clear();
+      for (const node of route) node.autoRoute?.choices.clear();
       updateMapDetail();
       updateEstimate();
       updateButtons();

@@ -6,7 +6,7 @@ Open `index.html` in a browser. The planner runs locally using the bundled SDK c
 2. Click the minimap in Draw mode to add a numbered node. Select an existing node and click an empty spot to start a new branch from it. Right-click a node to remove it and reconnect its children to its parent. If you remove node 1, its first child becomes the new start. Undo reverses the last addition or removal.
 3. The ETA and average speed update as you draw or change vehicles. For ground vehicles, the estimate uses the map's terrain where available. Choose a vehicle configuration if prompted. Ground vehicles without a usable driving profile use your average speed on firm, flat ground as the starting point.
 4. Scroll over the map to zoom in or out around your pointer. Use Pan to move the map and the percentage button to fit the whole map again.
-5. To auto-route a link, select its destination node and click **Auto-route link**. The planner searches from the node's parent for every selected ground vehicle and displays their routes. Different detours use their vehicles' colors, and identical paths share a line. **Remove auto-route** restores the straight link for every vehicle. Undo reverses either change.
+5. To auto-route a link, select its destination node and click **Auto-route link**. The planner finds clear routes from the node's parent. Every selected vehicle uses one of those routes, including vehicles added later. Ground vehicles choose by estimated driving time. Helicopters and boats use the shortest of the same routes for timing comparisons. **Remove auto-route** restores the straight link for every vehicle. Undo reverses either change.
 
 ## Refresh the SDK data
 
