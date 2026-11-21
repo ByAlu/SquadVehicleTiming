@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)]
     [string[]]$Map,
     [ValidateRange(2, 16)]
-    [int]$SpacingMeters = 4
+    [int]$SpacingMeters = 4,
+    [switch]$ColliderObjects
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,11 @@ $script = Join-Path $PSScriptRoot 'export-collision.py'
 $log = Join-Path ([IO.Path]::GetTempPath()) "SquadCollisionExport-$([Guid]::NewGuid()).log"
 $previous = $env:SQUAD_COLLISION_OPTIONS
 try {
-    $env:SQUAD_COLLISION_OPTIONS = ConvertTo-Json -Compress -InputObject @{ maps = @($Map); spacingMeters = $SpacingMeters }
+    $env:SQUAD_COLLISION_OPTIONS = ConvertTo-Json -Compress -InputObject @{
+        maps = @($Map)
+        spacingMeters = $SpacingMeters
+        colliderObjects = [bool]$ColliderObjects
+    }
     & $editor $project '-run=pythonscript' "-script=$script" '-culture=en' '-stdout' '-nullrhi' '-unattended' '-nosplash' '-NoSourceControl' "-abslog=$log" |
         Select-String -Pattern 'Squad collision:|Squad terrain: loaded|LogPython: Error'
     $editorExit = $LASTEXITCODE

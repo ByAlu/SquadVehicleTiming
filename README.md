@@ -65,6 +65,14 @@ The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision pr
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 
+To export the placed colliders directly, run the same command with `-ColliderObjects`.
+
+```powershell
+.\tools\export-collision.ps1 -Map 'Logar Valley' -ColliderObjects
+```
+
+This writes `maps/<map>/colliders.ndjson.gz`, with one record per loaded collision-enabled component and mesh records for shapes exposed by Unreal. The component records include world bounds, collision profile, vehicle response, and transforms for placed instances. Mesh records identify whether the extracted shape is simple or complex collision. Mesh-local geometry uses the associated transform. World geometry already includes that transform. Landscape heightfields and other components without an exported mesh have an explicit geometry status. This archive is for inspecting the SDK data. The planner uses `collision.js` for route checks.
+
 ## How the estimate works
 
 The displayed distance is horizontal map distance. The displayed average speed divides that distance by the estimated time.

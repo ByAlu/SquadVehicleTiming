@@ -13,6 +13,7 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
 TERRAIN = runpy.run_path(str(Path(__file__).with_name("export-terrain.py")))
+COLLIDERS = runpy.run_path(str(Path(__file__).with_name("export-collider-objects.py")))
 PROFILE = "Vehicle"
 TRACE = unreal.SystemLibrary
 DEBUG = unreal.DrawDebugTrace.NONE
@@ -62,7 +63,7 @@ def check_cell(world, x, y, dx, dy, cache):
     return "#" if hit is not None and hit.to_tuple()[0] else "."
 
 
-def export_map(entry, spacing):
+def export_map(entry, spacing, collider_objects=False):
     layer_path = entry.get("sourceLayer")
     if not layer_path:
         raise ValueError(f"{entry['name']} has no calibrated SDK layer.")
@@ -80,6 +81,10 @@ def export_map(entry, spacing):
     area = unreal.Box(unreal.Vector(x_min, y_min, -250000), unreal.Vector(x_max, y_max, 250000))
     world_path = layer_path.replace("/Gameplay_Layer_Data/", "/Gameplay_Layers/")
     world = TERRAIN["load_map"](world_path, area)
+    if collider_objects:
+        COLLIDERS["export_colliders"](world_path, entry["name"], (x_min, y_min, x_max, y_max),
+                                      ROOT / "maps" / entry["name"] / "colliders.ndjson.gz")
+        return
     rows = []
     cache = {}
     for row in range(row_count):
@@ -113,7 +118,7 @@ def main():
     for name in dict.fromkeys(options["maps"]):
         if name not in by_name:
             raise ValueError(f"Unknown map: {name}.")
-        export_map(by_name[name], options["spacingMeters"])
+        export_map(by_name[name], options["spacingMeters"], options.get("colliderObjects", False))
     unreal.log("Squad collision: completed export.")
 
 
