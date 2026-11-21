@@ -22,27 +22,28 @@ def surface_names(project):
     return {0: "Default", **{int(index): name for index, name in names}}
 
 
-def load_map(path):
+def load_map(path, collision_bounds=None):
     world = unreal.EditorLoadingAndSavingUtils.load_map(path)
     if world is None:
         raise RuntimeError(f"Could not load {path}.")
 
     partition = unreal.WorldPartitionBlueprintLibrary
-    descriptors = partition.get_actor_descs() or []
+    descriptors = (partition.get_intersecting_actor_descs(collision_bounds) if collision_bounds is not None
+                   else partition.get_actor_descs()) or []
     # Older gameplay maps have conventional streaming levels and no descriptors.
-    # Load terrain and splines explicitly in partitioned maps to make them traceable.
-    terrain = []
+    # The terrain-only export needs the landscape and splines. Collision needs all geometry in bounds.
+    actors = []
     for actor in descriptors:
         kind = actor.native_class.get_name() if actor.native_class else ""
         label = str(actor.label).lower()
-        if kind.startswith("Landscape") or any(word in label for word in ("road", "bridge", "water", "river")):
-            if not actor.actor_is_editor_only:
-                terrain.append(actor.guid)
-    if terrain:
-        partition.load_actors(terrain)
+        includes_support = kind.startswith("Landscape") or any(word in label for word in ("road", "bridge", "water", "river"))
+        if not actor.actor_is_editor_only and (collision_bounds is not None or includes_support):
+            actors.append(actor.guid)
+    if actors:
+        partition.load_actors(actors)
     unreal.GameplayStatics.flush_level_streaming(world)
     unreal.SystemLibrary.execute_console_command(world, "StaticMesh.FinishCompilation")
-    unreal.log(f"Squad terrain: loaded {path} with {len(terrain)} partition terrain actors.")
+    unreal.log(f"Squad terrain: loaded {path} with {len(actors)} partition actors.")
     return world
 
 

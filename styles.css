@@ -55,6 +55,8 @@ summary:focus-visible, .viewport:focus-visible { outline: 2px solid var(--accent
 .distance { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .6rem; color: var(--muted); font-size: .9rem; }
 .distance output { color: #f2f4ed; font-variant-numeric: tabular-nums; }
 .estimate .terrain-detail, #empty-vehicles { margin-top: .5rem; }
+.collision-detail { margin-top: .5rem; }
+.collision-detail[data-status="blocked"] { color: #ffb1a2; }
 .settings { display: grid; gap: .5rem; }
 .settings > label { font-size: .93rem; font-weight: 650; }
 .settings > label:not(:first-child) { margin-top: .55rem; }
@@ -130,6 +132,7 @@ details { color: var(--muted); font-size: .85rem; }
 #route-shadow { stroke: #17230f; stroke-width: 8; }
 #route-line { stroke: #a0b889; stroke-width: 4; }
 #selected-route { stroke: var(--accent); stroke-width: 4; }
+#blocked-route { stroke: #ff927d; stroke-width: 4; stroke-dasharray: 8 5; }
 #markers circle { fill: var(--accent); stroke: #17230f; stroke-width: 2; }
 #markers .selected-node { stroke: #fff; stroke-width: 3; }
 #overlay text { font: 700 12px "Segoe UI", sans-serif; dominant-baseline: central; }

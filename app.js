@@ -34,6 +34,7 @@ const selectedVehicles = new Map();
 const comparisons = new Map();
 const routeEstimates = new Map();
 const terrainEdges = new Map();
+const collisionEdges = new Map();
 const keyboardPoint = { x: 0.5, y: 0.5 };
 let keyboardActive = false;
 let mode = "draw";
@@ -46,6 +47,8 @@ let drawnWidth = 0;
 let drawnHeight = 0;
 let terrainGrid = null;
 let terrainStatus = "unavailable";
+let collisionGrid = null;
+let collisionStatus = "unavailable";
 let selectedNode = null;
 
 function selectMap() {
@@ -54,6 +57,8 @@ function selectMap() {
   const request = ++loadId;
   terrainGrid = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
+  collisionGrid = null;
+  collisionStatus = map.sourceLayer ? "loading" : "unavailable";
   clearRoute();
   const scale = scales.get(map.name) ?? [map.widthMeters ?? "", map.heightMeters ?? ""];
   [widthInput.value, heightInput.value] = scale;
@@ -84,6 +89,18 @@ function selectMap() {
   };
   incoming.src = src;
   if (map.sourceLayer) {
+    Collision.load(map).then((grid) => {
+      if (request !== loadId) return;
+      collisionGrid = grid;
+      collisionStatus = "ready";
+      collisionEdges.clear();
+      routeEstimates.clear();
+      updateEstimate();
+    }).catch(() => {
+      if (request !== loadId) return;
+      collisionStatus = "unavailable";
+      updateEstimate();
+    });
     Terrain.load(map).then((grid) => {
       if (request !== loadId) return;
       terrainGrid = grid;
@@ -240,6 +257,21 @@ function geometryFor(path) {
   return path.flatMap((node) => [...(node.via ?? []), node]);
 }
 
+function edgeCollision(node) {
+  if (!collisionEdges.has(node)) collisionEdges.set(node, Collision.path(edgePoints(node), collisionGrid));
+  return collisionEdges.get(node);
+}
+
+function pathCollision(path) {
+  let status = "clear";
+  for (const node of path.slice(1)) {
+    const edge = edgeCollision(node);
+    if (edge === "blocked") return edge;
+    if (edge === "unknown") status = edge;
+  }
+  return status;
+}
+
 function samplePathTerrain(path, width, height) {
   const terrain = { pieces: [], sampledMeters: 0, classifiedMeters: 0, waterMeters: 0 };
   for (const node of path.slice(1)) {
@@ -266,13 +298,14 @@ function estimatePath(node, width, height) {
   if (cached && !pending.length) return;
   const path = pathTo(node);
   const distance = cached?.distance ?? (width >= 1 && height >= 1 ? RouteMath.routeLength(geometryFor(path), width, height) : 0);
+  const collision = cached?.collision ?? pathCollision(path);
   const useTerrain = distance > 0 && terrainGrid && pending.some(([, vehicle]) => vehicle.ground);
   const { pieces, ...coverage } = useTerrain ? samplePathTerrain(path, width, height) : {};
   const times = cached?.times ?? new Map();
   const conditionsByDriveType = new Map();
   for (const [index, { model, speed, ground, tracked }] of pending) {
     let seconds = null;
-    if (distance > 0 && (model || speed >= 0.1)) {
+    if (distance > 0 && !(ground && collision === "blocked") && (model || speed >= 0.1)) {
       if (ground && coverage.sampledMeters) {
         if (!conditionsByDriveType.has(tracked)) conditionsByDriveType.set(tracked, Terrain.drivingConditions(pieces, tracked));
         const conditions = conditionsByDriveType.get(tracked);
@@ -283,24 +316,25 @@ function estimatePath(node, width, height) {
     }
     times.set(index, seconds);
   }
-  routeEstimates.set(node, { distance, times, terrain: pieces ? coverage : cached?.terrain });
+  routeEstimates.set(node, { distance, times, collision, terrain: pieces ? coverage : cached?.terrain });
 }
 
 function updateEstimate() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   for (const node of route) estimatePath(node, width, height);
-  const { distance, times, terrain } = routeEstimates.get(selectedNode) ?? { distance: 0 };
+  const { distance, times, terrain, collision } = routeEstimates.get(selectedNode) ?? { distance: 0 };
   const selectedNumber = route.indexOf(selectedNode) + 1;
   const estimatePathDetail = find("estimate-path");
   estimatePathDetail.hidden = !selectedNumber;
   estimatePathDetail.textContent = selectedNumber > 1 ? `Node 1 → Node ${selectedNumber}` : "Node 1";
   find("distance").textContent = distance > 0 ? formatDistance(distance) : "—";
   find("empty-vehicles").hidden = comparisons.size > 0;
-  for (const [index, { card, vehicle }] of comparisons) {
+  for (const [index, { card, vehicle, ground }] of comparisons) {
     const seconds = times?.get(index);
     const hasEstimate = seconds > 0 && Number.isFinite(seconds);
-    const eta = selectedNumber === 1 ? "0s" : hasEstimate ? RouteMath.formatTime(seconds) : "—";
+    const eta = ground && collision === "blocked" ? "Blocked" : selectedNumber === 1 ? "0s" :
+      hasEstimate ? RouteMath.formatTime(seconds) : "—";
     const time = card.querySelector(".vehicle-time");
     time.textContent = eta;
     time.setAttribute("aria-label", `${vehicle.name} travel time ${eta}`);
@@ -318,6 +352,17 @@ function updateEstimate() {
     terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
   }
   terrainDetail.hidden = !groundSelected || (!terrain && terrainStatus === "ready");
+  const collisionDetail = find("collision-detail");
+  collisionDetail.hidden = !groundSelected || !selectedNode?.parent;
+  collisionDetail.dataset.status = collision ?? "unknown";
+  const collisionMessages = {
+    clear: "No blockers detected in sampled collision cells.",
+    blocked: "Vehicle collision detected on the selected route.",
+    unknown: "Part of this route has no collision sample.",
+  };
+  collisionDetail.textContent = collisionGrid ? collisionMessages[collision] ?? "" :
+    collisionStatus === "loading" ? "Loading collision data…" : "Collision data unavailable for this map.";
+  renderRoute();
   renderRouteLabels();
   find("route-node-list").replaceChildren(...route.map((node, index) => {
     const item = document.createElement("li");
@@ -350,6 +395,7 @@ function setLinkWaypoints(node, via) {
   edits.push({ rerouted: node, via: node.via, selection: node });
   node.via = via.length ? via : undefined;
   terrainEdges.delete(node);
+  collisionEdges.delete(node);
   routeEstimates.clear();
   routeChanged();
 }
@@ -361,9 +407,9 @@ function autoRouteLink() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
-  const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh });
+  const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
   if (!result) {
-    autoPathStatus.textContent = "No route found through sampled terrain. Try a different pair of nodes.";
+    autoPathStatus.textContent = "No route found through sampled terrain and collision cells. Try a different pair of nodes.";
     return;
   }
   let via = result.via;
@@ -400,7 +446,9 @@ function mapLabel(x, y, label, className) {
 
 function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
-  const seconds = routeEstimates.get(node)?.times.get(vehicleIndex);
+  const estimate = routeEstimates.get(node);
+  if (estimate?.collision === "blocked" && comparisons.get(vehicleIndex)?.ground) return "Blocked";
+  const seconds = estimate?.times.get(vehicleIndex);
   return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
 }
 
@@ -438,6 +486,9 @@ function renderRoute() {
   find("route-shadow").setAttribute("d", branches);
   find("route-line").setAttribute("d", branches);
   find("selected-route").setAttribute("d", selected);
+  const groundSelected = [...comparisons.values()].some(({ ground }) => ground);
+  const blocked = collisionGrid && groundSelected ? route.filter((node) => node.parent && edgeCollision(node) === "blocked") : [];
+  find("blocked-route").setAttribute("d", blocked.map((node) => pathData(edgePoints(node))).join(" "));
   cursor.setAttribute("cx", keyboardPoint.x * drawnWidth);
   cursor.setAttribute("cy", keyboardPoint.y * drawnHeight);
   cursor.setAttribute("visibility", keyboardActive ? "visible" : "hidden");
@@ -446,7 +497,6 @@ function renderRoute() {
 function routeChanged() {
   const number = route.indexOf(selectedNode) + 1;
   find("route-status").textContent = number ? `Node ${number} selected · ${route.length} ${route.length === 1 ? "node" : "nodes"}` : "Add node 1.";
-  renderRoute();
   updateEstimate();
   updateButtons();
 }
@@ -458,6 +508,7 @@ function clearRoute() {
   edits.length = 0;
   routeEstimates.clear();
   terrainEdges.clear();
+  collisionEdges.clear();
   routeChanged();
 }
 
@@ -469,6 +520,7 @@ function undo() {
     rerouted.via = via;
     routeEstimates.clear();
     terrainEdges.delete(rerouted);
+    collisionEdges.delete(rerouted);
   } else if (removed) {
     route.splice(index, 0, removed);
     for (const child of children) {
@@ -477,10 +529,12 @@ function undo() {
     }
     routeEstimates.clear();
     terrainEdges.clear();
+    collisionEdges.clear();
   } else {
     const [added] = route.splice(index, 1);
     routeEstimates.delete(added);
     terrainEdges.delete(added);
+    collisionEdges.delete(added);
   }
   selectedNode = selection;
   routeChanged();
@@ -578,6 +632,7 @@ function removeNodeAt(point) {
   if (selectedNode === removed) selectedNode = parent;
   routeEstimates.clear();
   terrainEdges.clear();
+  collisionEdges.clear();
   routeChanged();
 }
 

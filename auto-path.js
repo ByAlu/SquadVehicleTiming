@@ -2,6 +2,7 @@
 
 const AutoPath = (() => {
   const terrainMath = typeof module === "undefined" ? Terrain : require("./terrain.js");
+  const collisionMath = typeof module === "undefined" ? Collision : require("./collision.js");
   const directions = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
 
   class MinQueue {
@@ -38,7 +39,7 @@ const AutoPath = (() => {
     }
   }
 
-  function find(start, end, terrain, width, height, { tracked, speedKmh }) {
+  function find(start, end, terrain, width, height, { tracked, speedKmh, collision }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
     const { columns, rows } = terrain.grid;
     const dxMeters = width / columns;
@@ -55,6 +56,8 @@ const AutoPath = (() => {
     const endY = rowAt(end.y);
     const startId = startY * columns + startX;
     const endId = endY * columns + endX;
+    const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
+    const blocked = (a, b) => collision && collisionMath.segment(a, b, collision) === "blocked";
 
     function passable(x, y) {
       const cell = terrain.rows[y]?.[x];
@@ -97,7 +100,9 @@ const AutoPath = (() => {
     }
 
     if (!passable(startX, startY) || !passable(endX, endY)) return null;
-    if (startId === endId) return { via: [], direct: true };
+    const direct = !blocked(start, end) && directPassable();
+    const directResult = direct ? { via: [], direct: true } : null;
+    if (startId === endId || blocked(start, center(startX, startY)) || blocked(center(endX, endY), end)) return directResult;
     const costs = new Float64Array(rows * columns).fill(Infinity);
     const previous = new Int32Array(costs.length).fill(-1);
     const visited = new Uint8Array(costs.length);
@@ -108,7 +113,7 @@ const AutoPath = (() => {
     while (queue.entries.length) {
       const { id } = queue.pop();
       if (visited[id]) continue;
-      if (id === endId) return { via: pathPoints(previous, endId, columns, rows, start, end), direct: directPassable() };
+      if (id === endId) return { via: pathPoints(previous, endId, columns, rows, start, end), direct };
       visited[id] = 1;
       const x = id % columns;
       const y = Math.floor(id / columns);
@@ -118,7 +123,7 @@ const AutoPath = (() => {
         const ny = y + dy;
         if (!canStep(x, y, nx, ny, distance)) continue;
         const nextId = ny * columns + nx;
-        if (visited[nextId]) continue;
+        if (visited[nextId] || (collision && blocked(center(x, y), center(nx, ny)))) continue;
         const next = terrain.rows[ny][nx];
         const grade = (next[0] - cell[0]) / (10 * distance);
         const pace = terrainMath.paceForGrade(grade, 1);
@@ -130,7 +135,7 @@ const AutoPath = (() => {
         queue.push({ id: nextId, cost: cost + lowerBound(nx, ny) });
       }
     }
-    return null;
+    return directResult;
   }
 
   function pathPoints(previous, endId, columns, rows, start, end) {

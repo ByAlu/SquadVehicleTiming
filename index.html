@@ -11,6 +11,7 @@
   <script src="route.js" defer></script>
   <script src="driving.js" defer></script>
   <script src="terrain.js" defer></script>
+  <script src="collision.js" defer></script>
   <script src="auto-path.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -53,6 +54,7 @@
         <p class="detail" id="estimate-path" hidden></p>
         <div class="distance"><span>Route distance</span><output id="distance">—</output></div>
         <p class="detail terrain-detail" id="terrain-detail" hidden></p>
+        <p class="detail collision-detail" id="collision-detail" role="status" hidden></p>
         <p class="detail" id="empty-vehicles" hidden>Add a vehicle to compare travel times.</p>
         <ul class="vehicle-comparisons" id="vehicle-comparisons" aria-label="Selected vehicles"></ul>
       </section>
@@ -75,6 +77,7 @@
             <path id="route-shadow"></path>
             <path id="route-line"></path>
             <path id="selected-route"></path>
+            <path id="blocked-route"></path>
             <g id="markers"></g>
             <circle id="cursor" r="7" visibility="hidden"></circle>
           </svg>
