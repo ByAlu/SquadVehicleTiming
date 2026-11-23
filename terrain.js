@@ -1,6 +1,7 @@
 "use strict";
 
 const Terrain = (() => {
+  const maxGrade = 0.45;
   // Estimated pace as a fraction of the firm-road speed, wheeled then tracked.
   const surfacePace = {
     Dirt: [0.84, 0.93], DirtGravel: [0.88, 0.95], Gravel: [0.9, 0.95],
@@ -102,7 +103,7 @@ const Terrain = (() => {
           sampledMeters += horizontal;
           grade = measuredGrade;
         }
-        grade = Math.max(-0.45, Math.min(0.45, grade));
+        grade = Math.max(-maxGrade, Math.min(maxGrade, grade));
         pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface });
       }
     }
@@ -114,7 +115,7 @@ const Terrain = (() => {
   }
 
   function paceForGrade(grade, surfacePace) {
-    return surfacePace / (1 + 4 * Math.max(0, grade) + 1.25 * Math.max(0, -grade));
+    return grade < 0 ? surfacePace * (1 - 1.25 * grade) : surfacePace / (1 + 4 * grade);
   }
 
   function paceForSurface(surface, tracked) {
@@ -131,7 +132,7 @@ const Terrain = (() => {
     });
   }
 
-  return { load, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
+  return { maxGrade, load, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 
 if (typeof module !== "undefined") module.exports = Terrain;

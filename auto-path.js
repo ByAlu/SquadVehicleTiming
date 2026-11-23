@@ -48,6 +48,7 @@ const AutoPath = (() => {
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
+    const fastestSpeed = speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1);
     const diagonal = Math.hypot(dxMeters, dyMeters);
     const steps = directions.map(([dx, dy]) => ({ dx, dy, distance: Math.hypot(dx * dxMeters, dy * dyMeters) }));
     const cellPace = terrain.surfaces.map((surface) => surface.type === "Water" ? 0 : terrainMath.paceForSurface(surface, tracked));
@@ -90,12 +91,12 @@ const AutoPath = (() => {
       const dx = Math.abs(endX - x);
       const dy = Math.abs(endY - y);
       const both = Math.min(dx, dy);
-      return (both * diagonal + (dx - both) * dxMeters + (dy - both) * dyMeters) / speed;
+      return (both * diagonal + (dx - both) * dxMeters + (dy - both) * dyMeters) / fastestSpeed;
     }
 
     function canStep(x, y, nx, ny, distance) {
       if (!passable(nx, ny) || (x !== nx && y !== ny && (!passable(nx, y) || !passable(x, ny)))) return false;
-      return Math.abs(gradeBetween(x, y, nx, ny, distance)) <= 0.45;
+      return Math.abs(gradeBetween(x, y, nx, ny, distance)) <= terrainMath.maxGrade;
     }
 
     function directPassable() {
