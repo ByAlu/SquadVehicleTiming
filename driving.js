@@ -1,8 +1,8 @@
 "use strict";
 
 const Driving = (() => {
-  const drivetrainEfficiency = 0.85;
-  const gravity = 9.81;
+  const drivetrainEfficiency = 1.0;
+  const gravity = 9.8;
   const fallbackFriction = 0.55;
   const speedStep = 0.15;
 
@@ -149,6 +149,36 @@ const Driving = (() => {
     return samples[Math.min(low, samples.length - 1)].engineAcceleration;
   }
 
+  function slopeFade(value, min, max) {
+    if (Math.abs(max - min) <= 1e-8) return value < max ? 1 : 0;
+    return 1 - Math.max(0, Math.min(1, (value - min) / (max - min)));
+  }
+
+  function slopeAcceleration(slope, incline, speed) {
+    if (!slope || speed <= 0.1) return 0;
+    if (incline < 0) return speed * incline * slope.brakingFactor;
+
+    const speedFade = slopeFade(speed * 3.6, slope.minSpeedKmh, slope.maxSpeedKmh);
+    // UpdateSlopeForces compares the direction's vertical component with radians.
+    const radiansPerDegree = Math.PI / 180;
+    const angleFade = slopeFade(incline, slope.minAngleDegrees * radiansPerDegree, slope.maxAngleDegrees * radiansPerDegree);
+    return speed * incline * slope.boostFactor * speedFade * angleFade;
+  }
+
+  function downhillSpeedLimit(cap, accelerationAtSpeed) {
+    if (accelerationAtSpeed(cap) >= 0) return cap;
+
+    // Keep the cruise target within the speed the modeled drive force can sustain.
+    let low = 0;
+    let high = cap;
+    for (let index = 0; index < 12; index++) {
+      const speed = (low + high) / 2;
+      if (accelerationAtSpeed(speed) >= 0) low = speed;
+      else high = speed;
+    }
+    return low;
+  }
+
   function travelTerrainPieceSeconds(pieces, model, speedLimitKmh = Infinity) {
     if (!pieces.length) return [];
     if (!(speedLimitKmh > 0)) return pieces.map(() => 0);
@@ -159,17 +189,22 @@ const Driving = (() => {
       return travelLegSeconds(pieces.map((piece) => piece.distance), flatModel, speedLimitKmh);
     }
 
-    const { samples, shifts, brakeAcceleration, gripAcceleration } = model;
+    const { profile: { slope }, samples, shifts, brakeAcceleration, gripAcceleration } = model;
     const maxSpeed = samples.at(-1).speed;
     const userLimit = speedLimitKmh / 3.6;
-    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor }) => ({
-      distance,
-      cap: Math.min(userLimit, maxSpeed * speedFactor),
-      grip: gripAcceleration * gripFactor,
-      power: powerFactor * (grade > 0 ? 1 / (1 + 7 * grade) : 1 - 1.5 * grade),
-      braking: Math.min(gripAcceleration * gripFactor,
-        brakeAcceleration * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade))),
-    }));
+    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor }) => {
+      const incline = grade / Math.hypot(1, grade);
+      const downhill = slope && grade < 0;
+      const grip = gripAcceleration * gripFactor;
+      const power = powerFactor * (grade > 0 ? 1 / (1 + 7 * grade) : downhill ? 1 : 1 - 1.5 * grade);
+      const gravityAssist = downhill ? -gravity * incline : 0;
+      const accelerationAtSpeed = (speed) => Math.min(grip, accelerationFromSpeed(samples, speed) * power)
+        + gravityAssist + slopeAcceleration(slope, incline, speed);
+      const target = Math.min(userLimit, maxSpeed * speedFactor);
+      const cap = downhill ? downhillSpeedLimit(target, accelerationAtSpeed) : target;
+      const braking = Math.min(grip, brakeAcceleration * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade)));
+      return { distance, cap, incline, accelerationAtSpeed, braking };
+    });
     const safeSpeeds = new Float64Array(segments.length + 1);
     safeSpeeds[segments.length] = Infinity;
     // Set approach speeds from the destination backwards so the vehicle can
@@ -181,18 +216,22 @@ const Driving = (() => {
 
     let start = 0;
     return segments.map((segment, index) => {
-      const { distance, cap, grip, power, braking } = segment;
-      const launch = Math.min(grip, accelerationFromSpeed(samples, start) * power);
+      const { distance, cap, incline, accelerationAtSpeed } = segment;
+      const launch = Math.max(0, accelerationAtSpeed(start));
       const reachable = Math.sqrt(start ** 2 + 2 * launch * distance);
-      const acceleration = Math.min(grip, accelerationFromSpeed(samples, (start + Math.min(cap, reachable)) / 2) * power);
+      const sampleSpeed = (start + Math.min(cap, reachable)) / 2;
+      const acceleration = Math.max(0, accelerationAtSpeed(sampleSpeed));
+      const braking = segment.braking + Math.max(0, -slopeAcceleration(slope, incline, sampleSpeed));
+      if (start === 0 && acceleration === 0) return Infinity;
       const end = Math.min(safeSpeeds[index + 1], cap, Math.sqrt(start ** 2 + 2 * acceleration * distance));
       const peakSquared = (2 * acceleration * braking * distance + braking * start ** 2 + acceleration * end ** 2)
         / (acceleration + braking);
       const peak = Math.max(start, end, Math.min(cap, Math.sqrt(peakSquared)));
-      const accelerating = (peak ** 2 - start ** 2) / (2 * acceleration);
+      const accelerating = acceleration > 0 ? (peak ** 2 - start ** 2) / (2 * acceleration) : 0;
       const brakingDistance = (peak ** 2 - end ** 2) / (2 * braking);
       const cruising = Math.max(0, distance - accelerating - brakingDistance);
-      let time = (peak - start) / acceleration + cruising / peak + (peak - end) / braking;
+      const accelerationTime = acceleration > 0 ? (peak - start) / acceleration : 0;
+      let time = accelerationTime + cruising / peak + (peak - end) / braking;
       for (const shift of shifts) {
         if (start <= shift.speed && shift.speed < peak) time += shift.time * (1 - shift.speed / peak);
       }

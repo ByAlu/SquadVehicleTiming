@@ -180,9 +180,10 @@ def write_vehicle_files(vehicles):
 
 def driving_profile(variant):
     speed_limit = variant.get("noSlipRpmLimitKmh", {}).get("forward")
+    body = variant.get("body", {})
     engine = variant.get("engine", {})
     transmission = variant.get("transmission", {})
-    mass = variant.get("body", {}).get("mass")
+    mass = body.get("mass")
     final_drive = transmission.get("final_drive_ratio")
     max_rpm = engine.get("max_rpm")
     torque_scale = engine.get("max_torque")
@@ -257,6 +258,16 @@ def driving_profile(variant):
     }
     if all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in friction_values):
         profile["frictionMultiplier"] = round(sum(friction_values) / len(friction_values), 6)
+    slope = {
+        "brakingFactor": body.get("slope_braking_factor"),
+        "boostFactor": body.get("slope_boost_factor"),
+        "minSpeedKmh": body.get("slope_boost_min_speed"),
+        "maxSpeedKmh": body.get("slope_boost_max_speed"),
+        "minAngleDegrees": body.get("slope_boost_min_angle"),
+        "maxAngleDegrees": body.get("slope_boost_max_angle"),
+    }
+    if all(type(value) in (int, float) and math.isfinite(value) and value >= 0 for value in slope.values()):
+        profile["slope"] = {key: round(value, 6) for key, value in slope.items()}
     return profile
 
 
