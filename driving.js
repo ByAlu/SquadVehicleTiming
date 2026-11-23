@@ -2,7 +2,8 @@
 
 const Driving = (() => {
   const drivetrainEfficiency = 0.85;
-  const gripAcceleration = 0.55 * 9.81;
+  const gravity = 9.81;
+  const fallbackFriction = 0.55;
   const speedStep = 0.15;
 
   function engineTorque(keys, rpm) {
@@ -26,9 +27,10 @@ const Driving = (() => {
       + (t3 - t2) * after.arrive * range;
   }
 
-  function prepare(profile) {
+  function prepare(profile, groundFriction = 1) {
     const { radiusMeters, massKg, gears, torque, idleRpm, brakeTorqueNm, shiftSeconds } = profile;
-    const braking = Math.min(gripAcceleration, brakeTorqueNm / (radiusMeters * massKg));
+    const gripAcceleration = (profile.frictionMultiplier ?? fallbackFriction) * groundFriction * gravity;
+    const brakeAcceleration = brakeTorqueNm / (radiusMeters * massKg);
     const metersPerRotation = 2 * Math.PI * radiusMeters;
     const maxSpeed = profile.speedLimitKmh / 3.6;
     const samples = [{ speed: 0, distance: 0, time: 0 }];
@@ -45,7 +47,7 @@ const Driving = (() => {
         shifts.push({ speed, time: shiftSeconds });
         time += shiftSeconds;
         distance += speed * shiftSeconds;
-        samples.push({ speed, distance, time, acceleration: samples.at(-1).acceleration });
+        samples.push({ speed, distance, time, engineAcceleration: samples.at(-1).engineAcceleration });
       }
 
       while (speed < targetSpeed) {
@@ -53,19 +55,21 @@ const Driving = (() => {
         const midpoint = (speed + nextSpeed) / 2;
         const rpm = Math.max(idleRpm, midpoint * rpmPerMeterPerSecond);
         const force = engineTorque(torque, rpm) * gear.ratio * drivetrainEfficiency / radiusMeters;
-        const acceleration = Math.min(gripAcceleration, force / massKg);
+        const engineAcceleration = force / massKg;
+        const acceleration = Math.min(gripAcceleration, engineAcceleration);
         if (!(acceleration > 0)) break;
 
         const duration = (nextSpeed - speed) / acceleration;
         time += duration;
         distance += midpoint * duration;
         speed = nextSpeed;
-        samples.push({ speed, distance, time, acceleration });
+        samples.push({ speed, distance, time, engineAcceleration });
       }
       if (speed === maxSpeed) break;
     }
 
-    return speed > 0 && braking > 0 && Number.isFinite(time) ? { samples, braking, shifts } : null;
+    if (!(speed > 0 && brakeAcceleration > 0 && Number.isFinite(time))) return null;
+    return { profile, samples, brakeAcceleration, gripAcceleration, shifts };
   }
 
   function accelerationAt(samples, speed) {
@@ -142,16 +146,20 @@ const Driving = (() => {
       if (samples[middle].speed <= speed) low = middle + 1;
       else high = middle;
     }
-    return samples[Math.min(low, samples.length - 1)].acceleration;
+    return samples[Math.min(low, samples.length - 1)].engineAcceleration;
   }
 
   function travelTerrainPieceSeconds(pieces, model, speedLimitKmh = Infinity) {
+    if (!pieces.length) return [];
     if (!(speedLimitKmh > 0)) return pieces.map(() => 0);
-    if (pieces.every(({ grade, speedFactor, gripFactor }) => grade === 0 && speedFactor === 1 && gripFactor === 1)) {
-      return travelLegSeconds(pieces.map((piece) => piece.distance), model, speedLimitKmh);
+    const groundFriction = pieces[0].gripFactor;
+    if (pieces.every(({ grade, speedFactor, powerFactor, gripFactor }) =>
+      grade === 0 && speedFactor === 1 && powerFactor === 1 && gripFactor === groundFriction)) {
+      const flatModel = groundFriction === 1 ? model : prepare(model.profile, groundFriction);
+      return travelLegSeconds(pieces.map((piece) => piece.distance), flatModel, speedLimitKmh);
     }
 
-    const { samples, shifts } = model;
+    const { samples, shifts, brakeAcceleration, gripAcceleration } = model;
     const maxSpeed = samples.at(-1).speed;
     const userLimit = speedLimitKmh / 3.6;
     const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor }) => ({
@@ -160,7 +168,7 @@ const Driving = (() => {
       grip: gripAcceleration * gripFactor,
       power: powerFactor * (grade > 0 ? 1 / (1 + 7 * grade) : 1 - 1.5 * grade),
       braking: Math.min(gripAcceleration * gripFactor,
-        model.braking * gripFactor * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade))),
+        brakeAcceleration * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade))),
     }));
     const safeSpeeds = new Float64Array(segments.length + 1);
     safeSpeeds[segments.length] = Infinity;

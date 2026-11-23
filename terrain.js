@@ -124,10 +124,10 @@ const Terrain = (() => {
   function drivingConditions(pieces, tracked) {
     return pieces.map(({ distance, grade, surface }) => {
       const pace = paceForSurface(surface, tracked);
-      const friction = isClassified(surface) && surface.type !== "Water" && Number.isFinite(surface.friction)
-        ? Math.sqrt(Math.max(0.25, Math.min(1, surface.friction / 0.95)))
+      const friction = surface?.type !== "Water" && Number.isFinite(surface?.friction) && surface.friction > 0
+        ? surface.friction
         : 1;
-      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace * friction, gripFactor: friction };
+      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction };
     });
   }
 

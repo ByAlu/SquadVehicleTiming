@@ -215,6 +215,7 @@ def driving_profile(variant):
     if tracks:
         radius = tracks.get("sprocket_radius", 0) / 100
         brake_torque = 2 * tracks.get("brake_torque", 0)
+        friction_values = [tracks.get("friction_multiplier")]
     else:
         wheels = variant.get("wheels", [])
         radii = {wheel.get("wheel_radius", 0) / 100 for wheel in wheels}
@@ -222,6 +223,7 @@ def driving_profile(variant):
             return None
         radius = next(iter(radii))
         brake_torque = sum(wheel.get("max_brake_torque", 0) for wheel in wheels)
+        friction_values = [wheel.get("friction_multiplier") for wheel in wheels]
     if not (radius > 0 and brake_torque > 0):
         return None
 
@@ -241,7 +243,7 @@ def driving_profile(variant):
     if not gears:
         return None
     blueprint = variant["blueprints"][0].rsplit(".", 1)[-1]
-    return {
+    profile = {
         "name": blueprint.removeprefix("BP_").removesuffix("_C").replace("_", " "),
         "massKg": mass,
         "tracked": bool(tracks),
@@ -253,6 +255,9 @@ def driving_profile(variant):
         "gears": gears,
         "torque": torque,
     }
+    if all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in friction_values):
+        profile["frictionMultiplier"] = round(sum(friction_values) / len(friction_values), 6)
+    return profile
 
 
 def build_vehicle_catalog():
