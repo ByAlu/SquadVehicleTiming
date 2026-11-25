@@ -88,7 +88,7 @@ function selectMap() {
   };
   incoming.src = src;
   if (map.sourceLayer) {
-    Collision.load(map).then((grid) => {
+    Collision.load(map, window.squadWaterData?.[map.name]).then((grid) => {
       if (request !== loadId) return;
       collisionGrid = grid;
       collisionStatus = "ready";
@@ -107,6 +107,7 @@ function selectMap() {
       if (request !== loadId) return;
       terrainGrid = grid;
       terrainStatus = "ready";
+      collisionEdges.clear();
       routeEstimates.clear();
       updateEstimate();
       updateButtons();
@@ -253,7 +254,12 @@ function geometryFor(path, index) {
 
 function edgeCollision(node, via) {
   const key = via?.length ? via : node;
-  if (!collisionEdges.has(key)) collisionEdges.set(key, Collision.path(edgePoints(node, via), collisionGrid));
+  if (!collisionEdges.has(key)) {
+    const points = edgePoints(node, via);
+    const water = Collision.waterGrid(terrainGrid, collisionGrid);
+    const flooded = water && Collision.path(points, water) === "blocked";
+    collisionEdges.set(key, flooded ? "water" : Collision.path(points, collisionGrid));
+  }
   return collisionEdges.get(key);
 }
 
@@ -261,8 +267,8 @@ function pathCollision(path, index) {
   let status = "clear";
   for (const node of path.slice(1)) {
     const edge = edgeCollision(node, node.routes?.get(index));
-    if (edge === "blocked") return edge;
-    if (edge === "unknown") status = edge;
+    if (edge === "water") return edge;
+    if (edge === "blocked" || (edge === "unknown" && status === "clear")) status = edge;
   }
   return status;
 }
@@ -305,7 +311,7 @@ function estimatePath(node, width, height) {
     const collision = ground ? pathCollision(path, index) : null;
     const { pieces, ...coverage } = distance > 0 && terrainGrid && ground ? samplePathTerrain(path, index, width, height) : {};
     let seconds = null;
-    if (distance > 0 && !(ground && collision === "blocked") && (model || speed >= 0.1)) {
+    if (distance > 0 && collision !== "blocked" && collision !== "water" && (model || speed >= 0.1)) {
       if (coverage.sampledMeters) {
         seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
       } else {
@@ -332,7 +338,7 @@ function updateEstimate() {
     const { distance, seconds, collision, terrain } = estimates?.get(index) ?? {};
     if (ground && selectedNode?.parent) checks.push(collision);
     const hasEstimate = seconds > 0 && Number.isFinite(seconds);
-    const eta = ground && collision === "blocked" ? "Blocked" : selectedNumber === 1 ? "0s" :
+    const eta = collision === "water" ? "Blocked by water" : collision === "blocked" ? "Blocked" : selectedNumber === 1 ? "0s" :
       hasEstimate ? RouteMath.formatTime(seconds) : "—";
     const time = card.querySelector(".vehicle-time");
     time.textContent = eta;
@@ -340,27 +346,29 @@ function updateEstimate() {
     const average = card.querySelector(".vehicle-average");
     average.textContent = hasEstimate ? `${numeric.format(distance / seconds * 3.6)} km/h avg` : "";
     const distanceOutput = card.querySelector(".vehicle-distance");
-    distanceOutput.textContent = distance > 0 ? formatDistance(distance) : "";
+    distanceOutput.textContent = collision !== "water" && distance > 0 ? formatDistance(distance) : "";
     const terrainDetail = card.querySelector(".vehicle-terrain");
     terrainDetail.hidden = !ground || !selectedNode?.parent || (!terrain && terrainStatus === "ready");
     if (terrain) {
       const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
-      const water = terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
+      const water = collision !== "water" && !collisionGrid?.water && terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
       terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
     } else {
       terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
     }
   }
-  const collision = checks.includes("blocked") ? "blocked" : checks.includes("unknown") ? "unknown" : "clear";
+  const collision = checks.includes("water") ? "water" :
+    checks.includes("blocked") ? "blocked" : checks.includes("unknown") ? "unknown" : "clear";
   const collisionDetail = find("collision-detail");
   collisionDetail.hidden = !checks.length;
-  collisionDetail.dataset.status = collision;
+  collisionDetail.dataset.status = collision === "water" ? "blocked" : collision;
   const collisionMessages = {
     clear: "No blockers detected in sampled collision cells.",
     blocked: "Vehicle collision detected on at least one selected path.",
     unknown: "Part of at least one selected path has no collision sample.",
+    water: "Water blocks at least one selected ground route.",
   };
-  collisionDetail.textContent = collisionGrid ? collisionMessages[collision] ?? "" :
+  collisionDetail.textContent = collisionGrid || collision === "water" ? collisionMessages[collision] ?? "" :
     collisionStatus === "loading" ? "Loading collision data…" : "Collision data unavailable for this map.";
   renderRoute();
   renderRouteLabels();
@@ -413,8 +421,14 @@ function autoRouteLink() {
   const node = selectedNode;
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
+  const endpoints = [node.parent, node];
+  const water = Collision.waterGrid(terrainGrid, collisionGrid);
+  const flooded = water && endpoints.find((point) => Collision.segment(point, point, water) === "blocked");
+  if (flooded) {
+    autoPathStatus.textContent = `Node ${route.indexOf(flooded) + 1} is in water. Place it on clear ground.`;
+    return;
+  }
   if (collisionGrid) {
-    const endpoints = [node.parent, node];
     const unavailable = endpoints.findIndex((point) => Collision.segment(point, point, collisionGrid) !== "clear");
     if (unavailable >= 0) {
       const number = route.indexOf(endpoints[unavailable]) + 1;
@@ -470,7 +484,7 @@ function autoRouteLink() {
 function removeAutoRoute() {
   if (!selectedNode?.routes?.size) return;
   setLinkRoutes(selectedNode, new Map());
-  autoPathStatus.textContent = "Auto-routes removed. The link is straight for every vehicle.";
+  autoPathStatus.textContent = "Auto-routes removed.";
   const focusTarget = autoPathButton.disabled ? viewport : autoPathButton;
   focusTarget.focus({ preventScroll: true });
 }
@@ -487,7 +501,7 @@ function mapLabel(x, y, label, className) {
 function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
   const estimate = routeEstimates.get(node)?.get(vehicleIndex);
-  if (estimate?.collision === "blocked") return "Blocked";
+  if (estimate?.collision === "blocked" || estimate?.collision === "water") return "Blocked";
   const seconds = estimate?.seconds;
   return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
 }
@@ -532,10 +546,12 @@ function renderRoute() {
     const groups = new Map();
     const straight = pathData(edgePoints(node));
     const hasAutoRoute = [...comparisons.keys()].some((index) => node.routes?.has(index));
-    let hasManual = !comparisons.size;
+    let hasManual = !comparisons.size && edgeCollision(node) !== "water";
     for (const [index, { color, ground }] of comparisons) {
       const via = node.routes?.get(index);
       if (!via && hasAutoRoute) continue;
+      const obstruction = ground ? edgeCollision(node, via) : null;
+      if (obstruction === "water") continue;
       const d = via ? pathData(edgePoints(node, via)) : straight;
       if (via) {
         const group = groups.get(d) ?? [];
@@ -544,7 +560,7 @@ function renderRoute() {
       } else {
         hasManual = true;
       }
-      if (collisionGrid && ground && edgeCollision(node, via) === "blocked") blocked.add(d);
+      if (obstruction === "blocked") blocked.add(d);
     }
     if (hasManual) {
       manual.push(straight);

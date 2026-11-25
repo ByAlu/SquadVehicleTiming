@@ -4,10 +4,14 @@ param(
     [string[]]$Map,
     [ValidateRange(2, 16)]
     [int]$SpacingMeters = 4,
-    [switch]$ColliderObjects
+    [switch]$ColliderObjects,
+    [switch]$Water
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Water -and $ColliderObjects) {
+    throw 'Use either -Water or -ColliderObjects per export.'
+}
 $sdk = (Resolve-Path -LiteralPath $SdkRoot).Path
 $editor = Join-Path $sdk 'UnrealEngine\Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $project = Join-Path $sdk 'Squad\SquadGame.uproject'
@@ -19,6 +23,7 @@ try {
         maps = @($Map)
         spacingMeters = $SpacingMeters
         colliderObjects = [bool]$ColliderObjects
+        water = [bool]$Water
     }
     & $editor $project '-run=pythonscript' "-script=$script" '-culture=en' '-stdout' '-nullrhi' '-unattended' '-nosplash' '-NoSourceControl' "-abslog=$log" |
         Select-String -Pattern 'Squad collision:|Squad terrain: loaded|LogPython: Error'

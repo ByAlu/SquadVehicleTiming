@@ -41,7 +41,10 @@ const AutoPath = (() => {
 
   function find(start, end, terrain, width, height, { tracked, speedKmh, collision }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
-    const { columns, rows } = collision?.grid ?? terrain.grid;
+    const searchGrid = collision?.grid ?? terrain.grid;
+    const { columns, rows } = searchGrid;
+    const water = collisionMath.waterGrid(terrain, collision);
+    const sameWaterGrid = water?.grid === searchGrid;
     const terrainColumns = Int32Array.from({ length: columns }, (_, x) => Math.floor((x + 0.5) * terrain.grid.columns / columns));
     const terrainRows = Int32Array.from({ length: rows }, (_, y) => Math.floor((y + 0.5) * terrain.grid.rows / rows));
     const heights = collisionMath.elevations(collision);
@@ -51,7 +54,7 @@ const AutoPath = (() => {
     const fastestSpeed = speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1);
     const diagonal = Math.hypot(dxMeters, dyMeters);
     const steps = directions.map(([dx, dy]) => ({ dx, dy, distance: Math.hypot(dx * dxMeters, dy * dyMeters) }));
-    const cellPace = terrain.surfaces.map((surface) => surface.type === "Water" ? 0 : terrainMath.paceForSurface(surface, tracked));
+    const cellPace = terrain.surfaces.map((surface) => terrainMath.paceForSurface(surface, tracked));
     const columnAt = (x) => Math.min(columns - 1, Math.floor(x * columns));
     const rowAt = (y) => Math.min(rows - 1, Math.floor(y * rows));
     const startX = columnAt(start.x);
@@ -61,13 +64,13 @@ const AutoPath = (() => {
     const startId = startY * columns + startX;
     const endId = endY * columns + endX;
     const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
-    const unsafe = (a, b) => collision && collisionMath.segment(a, b, collision) !== "clear";
+    const unsafe = (a, b) => (water && collisionMath.segment(a, b, water) === "blocked") ||
+      (collision && collisionMath.segment(a, b, collision) !== "clear");
     const terrainAt = (x, y) => terrain.rows[terrainRows[y]]?.[terrainColumns[x]];
 
     function passable(x, y) {
-      if (collision && collision.rows[y]?.[x] !== ".") return false;
-      const cell = terrainAt(x, y);
-      return cell ? cellPace[cell[3]] > 0 : Boolean(collision);
+      if (sameWaterGrid && water.rows[y]?.[x] === "#") return false;
+      return collision ? collision.rows[y]?.[x] === "." : Boolean(terrainAt(x, y));
     }
 
     function gradeBetween(x, y, nx, ny, distance) {
@@ -96,6 +99,7 @@ const AutoPath = (() => {
 
     function canStep(x, y, nx, ny, distance) {
       if (!passable(nx, ny) || (x !== nx && y !== ny && (!passable(nx, y) || !passable(x, ny)))) return false;
+      if (water && !sameWaterGrid && collisionMath.segment(center(x, y), center(nx, ny), water) === "blocked") return false;
       return Math.abs(gradeBetween(x, y, nx, ny, distance)) <= terrainMath.maxGrade;
     }
 
@@ -122,7 +126,9 @@ const AutoPath = (() => {
       return true;
     }
 
-    if (!passable(startX, startY) || !passable(endX, endY)) return null;
+    if (!passable(startX, startY) || !passable(endX, endY) ||
+        (water && (collisionMath.segment(start, start, water) === "blocked" ||
+          collisionMath.segment(end, end, water) === "blocked"))) return null;
     const direct = !unsafe(start, end) && directPassable();
     const directResult = direct ? { via: [], direct: true } : null;
     if (startId === endId || unsafe(start, center(startX, startY)) || unsafe(center(endX, endY), end)) return directResult;
@@ -138,7 +144,10 @@ const AutoPath = (() => {
       if (visited[id]) continue;
       if (id === endId) {
         const via = pathPoints(previous, endId, columns, rows, start, end);
-        return !collision || collisionMath.path([start, ...via, end], collision) === "clear" ? { via, direct } : directResult;
+        const points = [start, ...via, end];
+        if ((water && collisionMath.path(points, water) === "blocked") ||
+            (collision && collisionMath.path(points, collision) !== "clear")) return directResult;
+        return { via, direct };
       }
       visited[id] = 1;
       const x = id % columns;

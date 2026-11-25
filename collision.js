@@ -2,6 +2,8 @@
 
 const Collision = (() => {
   const elevationsByGrid = new WeakMap();
+  const mappedWaterByTerrain = new WeakMap();
+  const combinedWaterByCollision = new WeakMap();
 
   function elevations(data) {
     if (!data?.elevationDmInt16Le) return null;
@@ -14,7 +16,7 @@ const Collision = (() => {
     return heights;
   }
 
-  function load(map) {
+  function load(map, water) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = `maps/${encodeURIComponent(map.name)}/collision.js`;
@@ -28,6 +30,7 @@ const Collision = (() => {
             throw new Error("Collision grid does not match the selected map.");
           }
           elevations(data);
+          if (water) data.water = decodeWater(data.grid, water);
           resolve(data);
         } catch (error) {
           reject(error);
@@ -39,6 +42,44 @@ const Collision = (() => {
       };
       document.head.append(script);
     });
+  }
+
+  function decodeWater(grid, [columns, rows, ...ranges]) {
+    if (columns !== grid.columns || rows !== grid.rows || !ranges.length) return null;
+    const cells = new Uint8Array(columns * rows).fill(".".charCodeAt(0));
+    const blocked = "#".charCodeAt(0);
+    for (let index = 0; index < ranges.length; index += 2) {
+      cells.fill(blocked, ranges[index], ranges[index + 1]);
+    }
+    const lines = Array.from({ length: rows }, (_, row) =>
+      String.fromCharCode(...cells.subarray(row * columns, (row + 1) * columns)));
+    return { grid, rows: lines };
+  }
+
+  function waterGrid(terrain, collision) {
+    const measured = collision?.water;
+    if (!terrain) return measured ?? null;
+    if (!mappedWaterByTerrain.has(terrain)) {
+      const water = terrain.surfaces.map((surface) => surface.type === "Water");
+      const rows = water.includes(true)
+        ? terrain.rows.map((row) => row.map((cell) => water[cell?.[3]] ? "#" : ".").join(""))
+        : null;
+      mappedWaterByTerrain.set(terrain, rows ? { grid: terrain.grid, rows } : null);
+    }
+    const mapped = mappedWaterByTerrain.get(terrain);
+    if (!measured || !mapped) return measured ?? mapped;
+    if (!combinedWaterByCollision.has(collision)) {
+      const { grid } = measured;
+      const columns = Int32Array.from({ length: grid.columns }, (_, x) =>
+        Math.floor((x + 0.5) * mapped.grid.columns / grid.columns));
+      const rows = measured.rows.map((line, y) => {
+        const mappedLine = mapped.rows[Math.floor((y + 0.5) * mapped.grid.rows / grid.rows)];
+        if (!mappedLine.includes("#")) return line;
+        return Array.from(line, (cell, x) => mappedLine[columns[x]] === "#" ? "#" : cell).join("");
+      });
+      combinedWaterByCollision.set(collision, { grid, rows });
+    }
+    return combinedWaterByCollision.get(collision);
   }
 
   function segment(a, b, data) {
@@ -101,7 +142,7 @@ const Collision = (() => {
     return status;
   }
 
-  return { load, segment, path, elevations };
+  return { load, segment, path, elevations, waterGrid };
 })();
 
 if (typeof module !== "undefined") module.exports = Collision;

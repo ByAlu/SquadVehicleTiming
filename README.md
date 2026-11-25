@@ -65,6 +65,14 @@ The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision pr
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 
+The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Ground routes avoid water at least 0.75 m deep and water where the scan found no support. The planner uses the same conservative depth limit for all ground vehicles and also avoids water classified by the terrain scan. Manual links through blocked water hide the route line and ETA.
+
+Regenerate the mask after re-exporting a map's collision grid.
+
+```powershell
+.\tools\export-collision.ps1 -Map 'Black Coast' -Water
+```
+
 To export the placed colliders directly, run the same command with `-ColliderObjects`.
 
 ```powershell
@@ -83,7 +91,7 @@ The driving estimate starts at rest, accelerates at full throttle through the fo
 
 The terrain model samples short segments along the route. It projects the SDK slope onto the direction of travel and uses nearby elevation samples when the slope is unavailable. For profiles with SDK slope settings, uphill assist adds acceleration and fades with speed and incline. Downhill gravity adds acceleration while the SDK braking factor applies a speed-dependent opposing force. The descent speed target also accounts for the speed the modeled driving force can sustain. The app's terrain pace rule raises the target by 12.5% on a 10% descent relative to the same surface on flat ground. Surface type adjusts the speed target, with larger pace reductions on soft ground for wheeled vehicles. The model carries speed between segments and allows braking distance before a lower speed limit.
 
-Auto-routing searches the collision grid where available and uses the terrain grid for surface pace. It minimizes estimated cruising time for the chosen vehicle while avoiding mapped water, blocked or unsampled collision cells, and steps steeper than a 45% grade. The finer grid lets it follow openings the terrain grid misses. On maps without a collision grid, the search uses the terrain grid. If a direct link is passable, the planner compares it with the grid route using the vehicle timing model.
+Auto-routing searches the collision grid where available and uses the terrain grid for surface pace. It minimizes estimated cruising time for the chosen vehicle while avoiding deep water, blocked or unsampled collision cells, and steps steeper than a 45% grade. The finer grid lets it follow openings the terrain grid misses. On maps without a collision grid, the search uses the terrain grid. If a direct link is passable, the planner compares it with the grid route using the vehicle timing model.
 
 The grip limit models acceleration and braking using the SDK project gravity of 9.8 m/s² times the SDK vehicle friction multiplier times the SDK ground material friction. Wheeled profiles use the mean of their wheel multipliers. Profiles without a usable multiplier fall back to 0.55, and absent or unusable ground friction uses 1. The slope force calculation uses map grade as the vehicle pitch and assumes full contact. Surface pace, baseline uphill acceleration, service braking on grades, and drivetrain efficiency remain model assumptions. Gaps without usable grade data use level ground. The app reports sampled and classified portions of the route. Obstacle clearance, water crossings, and turning speed require separate checks.
 
