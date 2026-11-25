@@ -69,7 +69,7 @@ The deep-water mask uses the SDK water collision channel and compares each water
 
 The vehicle catalog checks each ground variant for SDK flotation and a water thruster. Amphibious variants can route across mapped water, including cells without a sampled bed. Auto-routing checks mapped obstacles and uses the sampled grade or nearby bank slope to estimate shore access.
 
-The planner estimates cruising speed by balancing SDK thruster force against straight-line drag at full configured depth damping in calm water. The calculation uses a 60 Hz reference step. A vehicle with no configured drag area uses its SDK width times height as an estimate. The resulting speed drives both route choice and water ETA, while the ground model handles each land stretch. Edit the water speed to override the estimate or clear it to restore the default. Vehicles without usable SDK inputs default to 10 km/h.
+The planner estimates cruising speed by balancing SDK thruster force against straight-line drag at full configured depth damping in calm water. The calculation uses a 60 Hz reference step. A vehicle with no configured drag area uses its SDK width times height as an estimate. The app displays the water speed and uses it automatically for route choice and water ETA, while the ground model handles each land stretch. Vehicles without usable SDK inputs default to 10 km/h.
 
 Regenerate the mask after re-exporting a map's collision grid.
 
