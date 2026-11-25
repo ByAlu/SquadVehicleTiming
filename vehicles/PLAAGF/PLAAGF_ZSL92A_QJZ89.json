@@ -12,6 +12,7 @@
           "/Game/Vehicles/WZ551/BP_WZ551B.BP_WZ551B_C",
           "/Game/Vehicles/WZ551/BP_WZ551B_Desert.BP_WZ551B_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/WZ551/Configs/BP_WZ551_VehicleConfig.BP_WZ551_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

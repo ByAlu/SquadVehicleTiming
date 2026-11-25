@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/ZBL08/BP_ZSL10_QLZ-87.BP_ZSL10_QLZ-87_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZBL08/Configs/BP_ZBL08_VehicleConfig.BP_ZBL08_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

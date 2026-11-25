@@ -12,6 +12,7 @@
           "/Game/Vehicles/ZBL08/BP_ZBL08_HJ73C.BP_ZBL08_HJ73C_C",
           "/Game/Vehicles/ZBL08/BP_ZBL08_HJ73C_Desert.BP_ZBL08_HJ73C_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZBL08/Configs/BP_ZBL08_VehicleConfig.BP_ZBL08_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

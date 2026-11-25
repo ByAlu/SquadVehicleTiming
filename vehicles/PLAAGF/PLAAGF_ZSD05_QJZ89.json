@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/ZBD05/BP_ZSD05_QJZ-89_Woodland.BP_ZSD05_QJZ-89_Woodland_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZBD05/Configs/BP_ZBD05_VehicleConfig_Tracked.BP_ZBD05_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

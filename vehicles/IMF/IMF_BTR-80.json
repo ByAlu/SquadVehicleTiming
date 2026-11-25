@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/BTR80/BP_BTR80_Militia.BP_BTR80_Militia_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR80/Configs/BP_BTR80_VehicleConfig.BP_BTR80_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

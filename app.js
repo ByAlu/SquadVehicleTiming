@@ -20,12 +20,14 @@ const cursor = find("cursor");
 const mapMessage = find("map-message");
 const svgNamespace = "http://www.w3.org/2000/svg";
 const numeric = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+const defaultWaterSpeedKmh = 10;
 const vehicleColors = ["#e1fa91", "#85d9ff", "#ffc180", "#f0a7ef", "#91edc6", "#ffaaa8", "#bbc1ff", "#ffdf75"];
 
 const route = [];
 const edits = [];
 const scales = new Map();
 const speeds = new Map();
+const waterSpeeds = new Map();
 const configurations = new Map();
 const drivingModels = new WeakMap();
 const vehiclesByFaction = new Map();
@@ -182,10 +184,9 @@ function addVehicle() {
   const card = find("vehicle-comparison-template").content.firstElementChild.cloneNode(true);
   const color = nextVehicleColor();
   const ground = vehicle.type !== "Helicopter" && vehicle.type !== "Boat";
-  const comparison = { vehicle, color, ground, card, model: null, speed: NaN, tracked: false };
+  const comparison = { vehicle, color, ground, card, model: null, speed: NaN, tracked: false, waterSpeedKmh: 0 };
   card.style.setProperty("--vehicle-color", color);
   card.querySelector(".vehicle-name").textContent = vehicle.name;
-  card.querySelector(".vehicle-detail").textContent = [vehicle.faction, vehicle.type].filter(Boolean).join(" · ");
   const remove = card.querySelector(".remove-vehicle");
   remove.setAttribute("aria-label", `Remove ${vehicle.name}, ${vehicle.faction}`);
   remove.addEventListener("click", () => {
@@ -217,10 +218,29 @@ function addVehicle() {
     comparison.speed = speedInput.validity.valid ? speedInput.valueAsNumber : NaN;
     refreshVehicleEstimate(vehicleIndex);
   });
+  const waterSpeedField = card.querySelector(".vehicle-water-speed");
+  const waterSpeedInput = waterSpeedField.querySelector("input");
+  waterSpeedInput.setAttribute("aria-label", `${vehicle.name} water speed in km/h`);
+  waterSpeedInput.value = waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh;
+  waterSpeedInput.addEventListener("input", () => {
+    if (waterSpeedField.hidden || !waterSpeedInput.validity.valid) return;
+    comparison.waterSpeedKmh = waterSpeedInput.valueAsNumber;
+    waterSpeeds.set(vehicle.id, comparison.waterSpeedKmh);
+    refreshVehicleEstimate(vehicleIndex);
+  });
+  waterSpeedInput.addEventListener("change", () => {
+    if (!waterSpeedInput.validity.valid) waterSpeedInput.value = comparison.waterSpeedKmh;
+  });
   const applyConfiguration = () => {
     const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
     comparison.model = profile ? drivingModels.get(profile) : null;
     comparison.tracked = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
+    const amphibious = (profile ?? vehicle).amphibious;
+    comparison.waterSpeedKmh = amphibious ? waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh : 0;
+    waterSpeedInput.value = waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh;
+    waterSpeedField.hidden = !amphibious;
+    const detail = amphibious ? [vehicle.faction, vehicle.type, "Amphibious"] : [vehicle.faction, vehicle.type];
+    card.querySelector(".vehicle-detail").textContent = detail.filter(Boolean).join(" · ");
     speedField.hidden = Boolean(comparison.model);
     refreshVehicleEstimate(vehicleIndex);
   };
@@ -252,21 +272,24 @@ function geometryFor(path, index) {
   return path.flatMap((node) => [...(node.routes?.get(index) ?? []), node]);
 }
 
-function edgeCollision(node, via) {
+function edgeCollision(node, via, amphibious = false) {
   const key = via?.length ? via : node;
-  if (!collisionEdges.has(key)) {
+  const checks = collisionEdges.get(key) ?? {};
+  const mode = amphibious ? "amphibious" : "ground";
+  if (!checks[mode]) {
     const points = edgePoints(node, via);
-    const water = Collision.waterGrid(terrainGrid, collisionGrid);
-    const flooded = water && Collision.path(points, water) === "blocked";
-    collisionEdges.set(key, flooded ? "water" : Collision.path(points, collisionGrid));
+    const water = Collision.waterGrid(terrainGrid, collisionGrid, amphibious);
+    const flooded = !amphibious && water && Collision.path(points, water) === "blocked";
+    checks[mode] = flooded ? "water" : Collision.path(points, collisionGrid, amphibious ? water : null);
+    collisionEdges.set(key, checks);
   }
-  return collisionEdges.get(key);
+  return checks[mode];
 }
 
-function pathCollision(path, index) {
+function pathCollision(path, index, amphibious) {
   let status = "clear";
   for (const node of path.slice(1)) {
-    const edge = edgeCollision(node, node.routes?.get(index));
+    const edge = edgeCollision(node, node.routes?.get(index), amphibious);
     if (edge === "water") return edge;
     if (edge === "blocked" || (edge === "unknown" && status === "clear")) status = edge;
   }
@@ -276,7 +299,8 @@ function pathCollision(path, index) {
 function sampleTerrain(points, width, height) {
   const heights = Collision.elevations(collisionGrid);
   const ground = heights ? { grid: collisionGrid.grid, heights } : null;
-  return Terrain.sampleRoute(points, width, height, terrainGrid, ground);
+  const water = Collision.waterGrid(terrainGrid, collisionGrid, true);
+  return Terrain.sampleRoute(points, width, height, terrainGrid, ground, water);
 }
 
 function samplePathTerrain(path, index, width, height) {
@@ -296,9 +320,20 @@ function samplePathTerrain(path, index, width, height) {
   return terrain;
 }
 
-function timeForConditions(model, speed, conditions) {
-  return model ? Driving.travelTerrainSeconds(conditions, model) :
-    conditions.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+function timeForConditions(model, speed, conditions, waterSpeedKmh) {
+  const landTime = (pieces) => model ? Driving.travelTerrainSeconds(pieces, model) :
+    pieces.reduce((time, piece) => time + RouteMath.travelSeconds(piece.distance, speed * piece.speedFactor), 0);
+  if (!(waterSpeedKmh > 0)) return landTime(conditions);
+  let time = 0;
+  let landStart = 0;
+  for (const [index, piece] of conditions.entries()) {
+    if (!piece.water) continue;
+    if (index > landStart) time += landTime(conditions.slice(landStart, index));
+    time += RouteMath.travelSeconds(piece.distance, waterSpeedKmh);
+    landStart = index + 1;
+  }
+  if (landStart < conditions.length) time += landTime(conditions.slice(landStart));
+  return time;
 }
 
 function estimatePath(node, width, height) {
@@ -306,14 +341,14 @@ function estimatePath(node, width, height) {
   const pending = [...comparisons].filter(([index]) => !estimates.has(index));
   if (!pending.length) return;
   const path = pathTo(node);
-  for (const [index, { model, speed, ground, tracked }] of pending) {
+  for (const [index, { model, speed, ground, tracked, waterSpeedKmh }] of pending) {
     const distance = width >= 1 && height >= 1 ? RouteMath.routeLength(geometryFor(path, index), width, height) : 0;
-    const collision = ground ? pathCollision(path, index) : null;
+    const collision = ground ? pathCollision(path, index, waterSpeedKmh > 0) : null;
     const { pieces, ...coverage } = distance > 0 && terrainGrid && ground ? samplePathTerrain(path, index, width, height) : {};
     let seconds = null;
     if (distance > 0 && collision !== "blocked" && collision !== "water" && (model || speed >= 0.1)) {
       if (coverage.sampledMeters) {
-        seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
+        seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked), waterSpeedKmh);
       } else {
         seconds = model ? Driving.travelSeconds(distance, model) : RouteMath.travelSeconds(distance, speed);
       }
@@ -334,7 +369,7 @@ function updateEstimate() {
   estimatePathDetail.textContent = selectedNumber > 1 ? `Node 1 → Node ${selectedNumber}` : "Node 1";
   find("empty-vehicles").hidden = comparisons.size > 0;
   const checks = [];
-  for (const [index, { card, vehicle, ground }] of comparisons) {
+  for (const [index, { card, vehicle, ground, waterSpeedKmh }] of comparisons) {
     const { distance, seconds, collision, terrain } = estimates?.get(index) ?? {};
     if (ground && selectedNode?.parent) checks.push(collision);
     const hasEstimate = seconds > 0 && Number.isFinite(seconds);
@@ -351,8 +386,8 @@ function updateEstimate() {
     terrainDetail.hidden = !ground || !selectedNode?.parent || (!terrain && terrainStatus === "ready");
     if (terrain) {
       const percent = (meters) => Math.min(100, Math.round(meters / distance * 100));
-      const water = collision !== "water" && !collisionGrid?.water && terrain.waterMeters > 0 ? " Water crossing speed is unverified." : "";
-      terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified.${water}`;
+      const water = waterSpeedKmh > 0 && terrain.waterMeters > 0 ? ` · ${percent(terrain.waterMeters)}% water` : "";
+      terrainDetail.textContent = `Terrain ${percent(terrain.sampledMeters)}% sampled · ${percent(terrain.classifiedMeters)}% classified${water}.`;
     } else {
       terrainDetail.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Terrain unavailable for this map.";
     }
@@ -422,14 +457,16 @@ function autoRouteLink() {
   const width = widthInput.valueAsNumber;
   const height = heightInput.valueAsNumber;
   const endpoints = [node.parent, node];
-  const water = Collision.waterGrid(terrainGrid, collisionGrid);
-  const flooded = water && endpoints.find((point) => Collision.segment(point, point, water) === "blocked");
+  const canFloat = [...comparisons.values()].some((comparison) => comparison.waterSpeedKmh > 0 && canAutoRoute(comparison));
+  const water = Collision.waterGrid(terrainGrid, collisionGrid, canFloat);
+  const flooded = !canFloat && water && endpoints.find((point) => Collision.segment(point, point, water) === "blocked");
   if (flooded) {
     autoPathStatus.textContent = `Node ${route.indexOf(flooded) + 1} is in water. Place it on clear ground.`;
     return;
   }
   if (collisionGrid) {
-    const unavailable = endpoints.findIndex((point) => Collision.segment(point, point, collisionGrid) !== "clear");
+    const unavailable = endpoints.findIndex((point) =>
+      Collision.segment(point, point, collisionGrid, canFloat ? water : null) !== "clear");
     if (unavailable >= 0) {
       const number = route.indexOf(endpoints[unavailable]) + 1;
       autoPathStatus.textContent = `Node ${number} is in a blocked or unsampled collision cell. Place it on clear ground.`;
@@ -437,31 +474,33 @@ function autoRouteLink() {
     }
   }
   const routes = new Map(node.routes);
-  const byDriveType = new Map();
+  const searches = new Map();
   let routed = 0;
   let detours = 0;
   let failures = 0;
   let changed = false;
   for (const [index, comparison] of comparisons) {
     if (!canAutoRoute(comparison)) continue;
-    const { tracked, model, speed } = comparison;
-    if (!byDriveType.has(tracked)) {
-      // Top speed scales every search cost equally. The full timing model below
-      // can still prefer the straight link for an individual vehicle.
-      const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
-      const result = AutoPath.find(node.parent, node, terrainGrid, width, height, { tracked, speedKmh, collision: collisionGrid });
+    const { tracked, model, speed, waterSpeedKmh } = comparison;
+    const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
+    // Ground-only costs scale equally with top speed. Amphibious routes also depend on water speed.
+    const key = waterSpeedKmh > 0 ? `${tracked}:${waterSpeedKmh / speedKmh}` : tracked;
+    if (!searches.has(key)) {
+      const result = AutoPath.find(node.parent, node, terrainGrid, width, height, {
+        tracked, speedKmh, waterSpeedKmh, collision: collisionGrid,
+      });
       const straight = result?.direct && result.via.length ? sampleTerrain(edgePoints(node), width, height).pieces : null;
       const detour = straight ? sampleTerrain(edgePoints(node, result.via), width, height).pieces : null;
-      byDriveType.set(tracked, { result, straight, detour });
+      searches.set(key, { result, straight, detour });
     }
-    const { result, straight, detour } = byDriveType.get(tracked);
+    const { result, straight, detour } = searches.get(key);
     if (!result) {
       failures++;
       continue;
     }
     let via = result.via;
     if (straight) {
-      const travelTime = (pieces) => timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked));
+      const travelTime = (pieces) => timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked), waterSpeedKmh);
       if (travelTime(straight) <= travelTime(detour)) via = [];
     }
     routed++;
@@ -547,10 +586,10 @@ function renderRoute() {
     const straight = pathData(edgePoints(node));
     const hasAutoRoute = [...comparisons.keys()].some((index) => node.routes?.has(index));
     let hasManual = !comparisons.size && edgeCollision(node) !== "water";
-    for (const [index, { color, ground }] of comparisons) {
+    for (const [index, { color, ground, waterSpeedKmh }] of comparisons) {
       const via = node.routes?.get(index);
       if (!via && hasAutoRoute) continue;
-      const obstruction = ground ? edgeCollision(node, via) : null;
+      const obstruction = ground ? edgeCollision(node, via, waterSpeedKmh > 0) : null;
       if (obstruction === "water") continue;
       const d = via ? pathData(edgePoints(node, via)) : straight;
       if (via) {

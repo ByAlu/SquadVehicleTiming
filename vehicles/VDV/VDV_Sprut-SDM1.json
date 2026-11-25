@@ -12,6 +12,7 @@
           "/Game/Vehicles/Sprut-SDM1/BP_Sprut.BP_Sprut_C",
           "/Game/Vehicles/Sprut-SDM1/BP_Sprut_Desert.BP_Sprut_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/Sprut-SDM1/Configs/BP_Sprut_VehicleConfig_tracked.BP_Sprut_VehicleConfig_tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

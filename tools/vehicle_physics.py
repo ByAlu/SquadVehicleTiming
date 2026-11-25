@@ -105,6 +105,19 @@ def config_data(asset):
     return result
 
 
+def is_amphibious(blueprint, default):
+    buoyancy = read_property(read_property(default, "buoyancy_component"), "buoyancy_data")
+    if not read_property(buoyancy, "pontoons"):
+        return False
+    asset = unreal.load_asset(blueprint.get_path_name().split(".", 1)[0])
+    subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
+    subobjects = unreal.SubobjectDataBlueprintFunctionLibrary
+    return asset is not None and any(
+        isinstance(subobjects.get_object(subobjects.get_data(handle)), unreal.SQWaterThrusterComponent)
+        for handle in subsystem.k2_gather_subobject_data_for_blueprint(asset)
+    )
+
+
 def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
     registry = unreal.AssetRegistryHelpers.get_asset_registry()
     variants = {}
@@ -128,6 +141,7 @@ def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
                 variants.setdefault(vehicle_id, {})[blueprint.get_path_name()] = blueprint
 
     profiles = {}
+    amphibious_by_blueprint = {}
     matched = 0
     configured = 0
     for vehicle in vehicles:
@@ -142,9 +156,16 @@ def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
             movement_class = movement.get_class().get_name() if movement else None
             config = read_property(movement, "VehicleConfigAsset")
             config_path = config.get_path_name() if config else None
-            key = (movement_class, config_path)
+            amphibious = False
+            if vehicle["type"] not in ("Boat", "Helicopter"):
+                if path not in amphibious_by_blueprint:
+                    amphibious_by_blueprint[path] = is_amphibious(blueprint, default)
+                amphibious = amphibious_by_blueprint[path]
+            key = (movement_class, config_path, amphibious)
             if key not in groups:
                 profile = {"blueprints": []}
+                if amphibious:
+                    profile["amphibious"] = True
                 if movement_class:
                     profile["movementClass"] = movement_class
                 if config_path:

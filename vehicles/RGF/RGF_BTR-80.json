@@ -12,6 +12,7 @@
           "/Game/Vehicles/BTR80/BP_BTR80_RUS.BP_BTR80_RUS_C",
           "/Game/Vehicles/BTR80/BP_BTR80_RUS_Desert.BP_BTR80_RUS_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR80/Configs/BP_BTR80_VehicleConfig.BP_BTR80_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

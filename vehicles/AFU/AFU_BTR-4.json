@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/BTR4/BP_BTR4_AFU.BP_BTR4_AFU_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR4/Configs/BP_BTR4_VehicleConfig.BP_BTR4_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

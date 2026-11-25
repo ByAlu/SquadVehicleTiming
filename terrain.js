@@ -50,9 +50,9 @@ const Terrain = (() => {
       uy * axis(at(column, row - 1), at(column, row + 1), height / rows);
   }
 
-  function sampleRoute(points, width, height, terrain, ground = null) {
+  function sampleRoute(points, width, height, terrain, ground = null, water = null) {
     const { columns, rows } = terrain.grid;
-    const sampleGrid = ground?.grid ?? terrain.grid;
+    const sampleGrid = ground?.grid ?? water?.grid ?? terrain.grid;
     const sampleSpacing = Math.min(width / columns, height / rows);
     const pieces = [];
     let sampledMeters = 0;
@@ -78,6 +78,14 @@ const Terrain = (() => {
         const fraction = (part + 0.5) / count;
         const x = start.x + dx * fraction;
         const y = start.y + dy * fraction;
+        if (water && water.rows[Math.min(water.grid.rows - 1, Math.floor(y * water.grid.rows))]?.[
+          Math.min(water.grid.columns - 1, Math.floor(x * water.grid.columns))] === "#") {
+          sampledMeters += horizontal;
+          classifiedMeters += horizontal;
+          waterMeters += horizontal;
+          pieces.push({ legIndex: index - 1, distance: horizontal, grade: 0, surface: null, water: true });
+          continue;
+        }
         const cell = sample(x, y);
         const measuredGrade = ground ? groundGrade(x, y, ux, uy, width, height, ground) : null;
         let grade = 0;
@@ -123,12 +131,12 @@ const Terrain = (() => {
   }
 
   function drivingConditions(pieces, tracked) {
-    return pieces.map(({ distance, grade, surface }) => {
+    return pieces.map(({ distance, grade, surface, water }) => {
       const pace = paceForSurface(surface, tracked);
       const friction = surface?.type !== "Water" && Number.isFinite(surface?.friction) && surface.friction > 0
         ? surface.friction
         : 1;
-      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction };
+      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction, water };
     });
   }
 

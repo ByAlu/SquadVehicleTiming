@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/ASLAV/BP_ASLAV.BP_ASLAV_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ASLAV/Configs/BP_ASLAV_VehicleConfig.BP_ASLAV_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

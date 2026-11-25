@@ -12,6 +12,7 @@
           "/Game/Vehicles/BMD-1M/BP_BMD1M.BP_BMD1M_C",
           "/Game/Vehicles/BMD-1M/BP_BMD1M_Desert.BP_BMD1M_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BMD-1M/Configs/BP_BMD1M_VehicleConfig_Tracked.BP_BMD1M_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

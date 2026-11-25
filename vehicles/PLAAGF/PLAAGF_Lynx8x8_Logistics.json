@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/Lynx_8x8/BP_LynxATV_Logistic.BP_LynxATV_Logistic_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/Lynx_8x8/Configs/BP_LynxATV_VehicleConfigTracked.BP_LynxATV_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

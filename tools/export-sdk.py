@@ -268,6 +268,8 @@ def driving_profile(variant):
     }
     if all(type(value) in (int, float) and math.isfinite(value) and value >= 0 for value in slope.values()):
         profile["slope"] = {key: round(value, 6) for key, value in slope.items()}
+    if variant.get("amphibious"):
+        profile["amphibious"] = True
     return profile
 
 
@@ -286,6 +288,8 @@ def build_vehicle_catalog():
         profiles = [profile for variant in variants if (profile := driving_profile(variant))]
         if profiles:
             vehicle["drivingProfiles"] = profiles
+        elif variants and all(variant.get("amphibious") for variant in variants):
+            vehicle["amphibious"] = True
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"

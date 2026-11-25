@@ -12,6 +12,7 @@
           "/Game/Vehicles/BTR-D/BP_BTR-D_AGS17.BP_BTR-D_AGS17_C",
           "/Game/Vehicles/BTR-D/BP_BTR-D_AGS17_Desert.BP_BTR-D_AGS17_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR-D/Configs/BP_BTR-D_Transport_VehicleConfig_Tracked.BP_BTR-D_Transport_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

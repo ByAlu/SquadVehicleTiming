@@ -12,6 +12,7 @@
           "/Game/Vehicles/MTLB/BP_MTLB_RGF.BP_MTLB_RGF_C",
           "/Game/Vehicles/MTLB/BP_MTLB_RGF_Desert.BP_MTLB_RGF_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/MTLB/Configs/BP_MTLB_VehicleConfigTracked.BP_MTLB_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -56,7 +56,7 @@ const Collision = (() => {
     return { grid, rows: lines };
   }
 
-  function waterGrid(terrain, collision) {
+  function waterGrid(terrain, collision, alignToCollision = false) {
     const measured = collision?.water;
     if (!terrain) return measured ?? null;
     if (!mappedWaterByTerrain.has(terrain)) {
@@ -67,12 +67,14 @@ const Collision = (() => {
       mappedWaterByTerrain.set(terrain, rows ? { grid: terrain.grid, rows } : null);
     }
     const mapped = mappedWaterByTerrain.get(terrain);
-    if (!measured || !mapped) return measured ?? mapped;
+    if (!collision || !mapped || (!measured && !alignToCollision)) return measured ?? mapped;
     if (!combinedWaterByCollision.has(collision)) {
-      const { grid } = measured;
+      const { grid } = collision;
       const columns = Int32Array.from({ length: grid.columns }, (_, x) =>
         Math.floor((x + 0.5) * mapped.grid.columns / grid.columns));
-      const rows = measured.rows.map((line, y) => {
+      const dry = ".".repeat(grid.columns);
+      const rows = Array.from({ length: grid.rows }, (_, y) => {
+        const line = measured?.rows[y] ?? dry;
         const mappedLine = mapped.rows[Math.floor((y + 0.5) * mapped.grid.rows / grid.rows)];
         if (!mappedLine.includes("#")) return line;
         return Array.from(line, (cell, x) => mappedLine[columns[x]] === "#" ? "#" : cell).join("");
@@ -82,7 +84,7 @@ const Collision = (() => {
     return combinedWaterByCollision.get(collision);
   }
 
-  function segment(a, b, data) {
+  function segment(a, b, data, water = null) {
     if (!data) return "unknown";
     const { columns, rows } = data.grid;
     const ax = a.x * columns;
@@ -105,7 +107,7 @@ const Collision = (() => {
 
     function blocked(column, row) {
       const cell = data.rows[row]?.[column];
-      if (cell !== "." && cell !== "#") unknown = true;
+      if (cell !== "." && cell !== "#" && water?.rows[row]?.[column] !== "#") unknown = true;
       return cell === "#";
     }
 
@@ -132,10 +134,10 @@ const Collision = (() => {
     }
   }
 
-  function path(points, data) {
+  function path(points, data, water = null) {
     let status = "clear";
     for (let index = 1; index < points.length; index++) {
-      const check = segment(points[index - 1], points[index], data);
+      const check = segment(points[index - 1], points[index], data, water);
       if (check === "blocked") return check;
       if (check === "unknown") status = check;
     }

@@ -7,6 +7,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 const AutoPath = require("../auto-path.js");
 const Collision = require("../collision.js");
+const Terrain = require("../terrain.js");
 
 test("auto-routing finds a clear detour through the Logar Valley compound", () => {
   const directory = path.join(__dirname, "../maps/Logar Valley");
@@ -63,6 +64,39 @@ test("auto-routing falls back to mapped water when depth data is unavailable", (
   collision.water = { grid, rows: ["#.."] };
   const mapped = { x: 0.5, y: 0.5 };
   assert.equal(Collision.segment(mapped, mapped, Collision.waterGrid(terrain, collision)), "blocked");
+});
+
+test("amphibious routing crosses water without ground support and still avoids mapped blockers", () => {
+  const grid = { columns: 5, rows: 3 };
+  const cell = [0, 0, 0, 0];
+  const terrain = { grid, rows: Array.from({ length: 3 }, () => Array(5).fill(cell)), surfaces: [{ type: "Dirt" }] };
+  const collision = {
+    grid,
+    rows: [".???.", ".?#?.", ".???."],
+    water: { grid, rows: [".###.", ".###.", ".###."] },
+  };
+  const start = { x: 0.1, y: 0.5 };
+  const end = { x: 0.9, y: 0.5 };
+  const options = { tracked: false, speedKmh: 60, collision };
+  assert.equal(AutoPath.find(start, end, terrain, 50, 30, options), null);
+  const result = AutoPath.find(start, end, terrain, 50, 30, { ...options, waterSpeedKmh: 10 });
+  assert.equal(result?.direct, false);
+  const path = [start, ...result.via, end];
+  assert.equal(Collision.path(path, collision, collision.water), "clear");
+  const water = Terrain.sampleRoute(path, 50, 30, terrain, null, collision.water);
+  assert.ok(water.waterMeters > 0);
+  assert.ok(Terrain.drivingConditions(water.pieces, false).some((piece) => piece.water && piece.grade === 0));
+
+  const afloat = { x: 0.3, y: 0.5 };
+  assert.equal(AutoPath.find(start, afloat, terrain, 50, 30, { ...options, waterSpeedKmh: 10 })?.direct, true);
+});
+
+test("amphibious auto-routing rejects a steep bank above unsampled water", () => {
+  const grid = { columns: 2, rows: 1 };
+  const terrain = { grid, rows: [[[0, 600, 0, 0], null]], surfaces: [{ type: "Dirt" }] };
+  const collision = { grid, rows: [".?"], water: { grid, rows: [".#"] } };
+  const options = { tracked: false, speedKmh: 60, waterSpeedKmh: 10, collision };
+  assert.equal(AutoPath.find({ x: 0.25, y: 0.5 }, { x: 0.75, y: 0.5 }, terrain, 8, 4, options), null);
 });
 
 test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {

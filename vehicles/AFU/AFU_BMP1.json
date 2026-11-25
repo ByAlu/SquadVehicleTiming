@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/BMP1_AFU/BP_BMP1_AFU.BP_BMP1_AFU_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BMP-1/Configs/BP_BMP1_VehicleConfigTracked.BP_BMP1_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

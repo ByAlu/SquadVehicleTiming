@@ -12,6 +12,7 @@
           "/Game/Vehicles/BRDM-2/BP_BRDM-2_Spandrel_RUS.BP_BRDM-2_Spandrel_RUS_C",
           "/Game/Vehicles/BRDM-2/BP_BRDM-2_Spandrel_RUS_Desert.BP_BRDM-2_Spandrel_RUS_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BRDM-2/Configs/BP_BRDM-2_VehicleConfig.BP_BRDM-2_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

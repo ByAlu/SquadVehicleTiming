@@ -12,6 +12,7 @@
           "/Game/Vehicles/MTLB/BP_MTLBM_6MA_RUS.BP_MTLBM_6MA_RUS_C",
           "/Game/Vehicles/MTLB/BP_MTLBM_6MA_RUS_Desert.BP_MTLBM_6MA_RUS_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/MTLB/Configs/BP_MTLB_VehicleConfigTracked.BP_MTLB_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

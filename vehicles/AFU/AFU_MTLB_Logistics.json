@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/MTLB_AFU/BP_MTLB_LOGI_AFU.BP_MTLB_LOGI_AFU_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/MTLB/Configs/BP_MTLB_VehicleConfigTracked.BP_MTLB_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

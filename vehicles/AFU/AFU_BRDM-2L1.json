@@ -11,6 +11,7 @@
         "blueprints": [
           "/Game/Vehicles/BRDM2-L1_AFU/BP_BRDM-2L1_AFU.BP_BRDM-2L1_AFU_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BRDM-2/Configs/BP_BRDM-2_VehicleConfig.BP_BRDM-2_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

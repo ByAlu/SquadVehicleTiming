@@ -12,6 +12,7 @@
           "/Game/Vehicles/BTR-MDM/BP_BTRMDM_PKT_RWS.BP_BTRMDM_PKT_RWS_C",
           "/Game/Vehicles/BTR-MDM/BP_BTRMDM_PKT_RWS_Desert.BP_BTRMDM_PKT_RWS_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR-MDM/Configs/BP_BTRMDM_VehicleConfig_Tracked.BP_BTRMDM_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -12,6 +12,7 @@
           "/Game/Vehicles/ZBD04A/BP_ZBD04A.BP_ZBD04A_C",
           "/Game/Vehicles/ZBD04A/BP_ZBD04A_Desert.BP_ZBD04A_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZBD04A/Configs/BP_ZBD04A_VehicleConfigTracked.BP_ZBD04A_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

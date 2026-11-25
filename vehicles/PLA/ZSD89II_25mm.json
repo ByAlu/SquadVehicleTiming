@@ -12,6 +12,7 @@
           "/Game/Vehicles/ZSD89/BP_ZSD89II.BP_ZSD89II_C",
           "/Game/Vehicles/ZSD89/BP_ZSD89II_Desert.BP_ZSD89II_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZSD89/Config/BP_ZSD89_VehicleConfigTracked.BP_ZSD89_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -12,6 +12,7 @@
           "/Game/Vehicles/ACV-15/BP_ACV-15_M2.BP_ACV-15_M2_C",
           "/Game/Vehicles/ACV-15/BP_ACV-15_M2_Desert.BP_ACV-15_M2_Desert_C"
         ],
+        "amphibious": true,
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ACV-15/Configs/BP_ACV15_VehicleConfig_Tracked.BP_ACV15_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -12,6 +12,7 @@
           "/Game/Vehicles/LAV25/BP_LAV25.BP_LAV25_C",
           "/Game/Vehicles/LAV25/BP_LAV25_Woodland.BP_LAV25_Woodland_C"
         ],
+        "amphibious": true,
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/LAV25/Configs/BP_LAV25_VehicleConfig.BP_LAV25_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

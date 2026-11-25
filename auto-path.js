@@ -39,11 +39,13 @@ const AutoPath = (() => {
     }
   }
 
-  function find(start, end, terrain, width, height, { tracked, speedKmh, collision }) {
+  function find(start, end, terrain, width, height, { tracked, speedKmh, waterSpeedKmh, collision }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
     const searchGrid = collision?.grid ?? terrain.grid;
     const { columns, rows } = searchGrid;
-    const water = collisionMath.waterGrid(terrain, collision);
+    const waterSpeed = waterSpeedKmh > 0 ? waterSpeedKmh / 3.6 : 0;
+    const water = collisionMath.waterGrid(terrain, collision, waterSpeed > 0);
+    const waterSupport = waterSpeed ? water : null;
     const sameWaterGrid = water?.grid === searchGrid;
     const terrainColumns = Int32Array.from({ length: columns }, (_, x) => Math.floor((x + 0.5) * terrain.grid.columns / columns));
     const terrainRows = Int32Array.from({ length: rows }, (_, y) => Math.floor((y + 0.5) * terrain.grid.rows / rows));
@@ -51,7 +53,7 @@ const AutoPath = (() => {
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
-    const fastestSpeed = speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1);
+    const fastestSpeed = Math.max(waterSpeed, speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1));
     const diagonal = Math.hypot(dxMeters, dyMeters);
     const steps = directions.map(([dx, dy]) => ({ dx, dy, distance: Math.hypot(dx * dxMeters, dy * dyMeters) }));
     const cellPace = terrain.surfaces.map((surface) => terrainMath.paceForSurface(surface, tracked));
@@ -64,16 +66,20 @@ const AutoPath = (() => {
     const startId = startY * columns + startX;
     const endId = endY * columns + endX;
     const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
-    const unsafe = (a, b) => (water && collisionMath.segment(a, b, water) === "blocked") ||
-      (collision && collisionMath.segment(a, b, collision) !== "clear");
+    const unsafe = (a, b) => (!waterSpeed && water && collisionMath.segment(a, b, water) === "blocked") ||
+      (collision && collisionMath.segment(a, b, collision, waterSupport) !== "clear");
     const terrainAt = (x, y) => terrain.rows[terrainRows[y]]?.[terrainColumns[x]];
+    const waterAt = (x, y) => sameWaterGrid && water.rows[y]?.[x] === "#";
 
     function passable(x, y) {
-      if (sameWaterGrid && water.rows[y]?.[x] === "#") return false;
+      if (waterAt(x, y)) return waterSpeed > 0 && (!collision || collision.rows[y]?.[x] !== "#");
       return collision ? collision.rows[y]?.[x] === "." : Boolean(terrainAt(x, y));
     }
 
     function gradeBetween(x, y, nx, ny, distance) {
+      const fromWater = waterSpeed > 0 && waterAt(x, y);
+      const toWater = waterSpeed > 0 && waterAt(nx, ny);
+      if (fromWater && toWater) return 0;
       if (heights) {
         const from = heights[y * columns + x];
         const to = heights[ny * columns + nx];
@@ -81,6 +87,12 @@ const AutoPath = (() => {
       }
       const from = terrainAt(x, y);
       const to = terrainAt(nx, ny);
+      // Where water has no sampled support, use the slope of the adjacent bank.
+      if (fromWater || toWater) {
+        const bank = fromWater ? to : from;
+        return ((bank?.[1] ?? 0) * (nx - x) * dxMeters + (bank?.[2] ?? 0) * (ny - y) * dyMeters) /
+          (1000 * distance);
+      }
       if (!from || !to) return 0;
       const coarseDx = (terrainColumns[nx] - terrainColumns[x]) * width / terrain.grid.columns;
       const coarseDy = (terrainRows[ny] - terrainRows[y]) * height / terrain.grid.rows;
@@ -99,7 +111,8 @@ const AutoPath = (() => {
 
     function canStep(x, y, nx, ny, distance) {
       if (!passable(nx, ny) || (x !== nx && y !== ny && (!passable(nx, y) || !passable(x, ny)))) return false;
-      if (water && !sameWaterGrid && collisionMath.segment(center(x, y), center(nx, ny), water) === "blocked") return false;
+      if (!waterSpeed && water && !sameWaterGrid &&
+          collisionMath.segment(center(x, y), center(nx, ny), water) === "blocked") return false;
       return Math.abs(gradeBetween(x, y, nx, ny, distance)) <= terrainMath.maxGrade;
     }
 
@@ -127,7 +140,7 @@ const AutoPath = (() => {
     }
 
     if (!passable(startX, startY) || !passable(endX, endY) ||
-        (water && (collisionMath.segment(start, start, water) === "blocked" ||
+        (!waterSpeed && water && (collisionMath.segment(start, start, water) === "blocked" ||
           collisionMath.segment(end, end, water) === "blocked"))) return null;
     const direct = !unsafe(start, end) && directPassable();
     const directResult = direct ? { via: [], direct: true } : null;
@@ -145,8 +158,8 @@ const AutoPath = (() => {
       if (id === endId) {
         const via = pathPoints(previous, endId, columns, rows, start, end);
         const points = [start, ...via, end];
-        if ((water && collisionMath.path(points, water) === "blocked") ||
-            (collision && collisionMath.path(points, collision) !== "clear")) return directResult;
+        if ((!waterSpeed && water && collisionMath.path(points, water) === "blocked") ||
+            (collision && collisionMath.path(points, collision, waterSupport) !== "clear")) return directResult;
         return { via, direct };
       }
       visited[id] = 1;
@@ -162,8 +175,9 @@ const AutoPath = (() => {
         const next = terrainAt(nx, ny);
         const grade = gradeBetween(x, y, nx, ny, distance);
         const pace = terrainMath.paceForGrade(grade, 1);
-        const resistance = (1 / (cellPace[cell?.[3]] ?? 1) + 1 / (cellPace[next?.[3]] ?? 1)) / 2;
-        const cost = costs[id] + distance * Math.hypot(1, grade) * resistance / (speed * pace);
+        const fromSpeed = waterSpeed && waterAt(x, y) ? waterSpeed : speed * pace * (cellPace[cell?.[3]] ?? 1);
+        const toSpeed = waterSpeed && waterAt(nx, ny) ? waterSpeed : speed * pace * (cellPace[next?.[3]] ?? 1);
+        const cost = costs[id] + distance * Math.hypot(1, grade) * (1 / fromSpeed + 1 / toSpeed) / 2;
         if (cost >= costs[nextId]) continue;
         costs[nextId] = cost;
         previous[nextId] = id;
