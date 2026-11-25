@@ -53,6 +53,7 @@ let mapWidth = 0;
 let mapHeight = 0;
 let terrainGrid = null;
 let paintedTerrain = null;
+let paintedWater = null;
 let terrainPointer = null;
 let terrainStatus = "unavailable";
 let collisionGrid = null;
@@ -67,9 +68,10 @@ function selectMap() {
   mapHeight = map.heightMeters ?? 0;
   terrainGrid = null;
   paintedTerrain = null;
+  paintedWater = null;
+  collisionGrid = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
   updateTerrainOverlay();
-  collisionGrid = null;
   collisionStatus = map.sourceLayer ? "loading" : "unavailable";
   clearRoute();
   find("map-heading").textContent = map.name;
@@ -104,6 +106,7 @@ function selectMap() {
       if (request !== loadId) return;
       collisionGrid = grid;
       collisionStatus = "ready";
+      updateTerrainOverlay();
       collisionEdges.clear();
       terrainEdges.clear();
       routeEstimates.clear();
@@ -140,6 +143,7 @@ function surfaceName(type) {
 
 function updateTerrainOverlay() {
   const active = terrainOverlayToggle.getAttribute("aria-pressed") === "true";
+  const water = collisionGrid?.water ?? null;
   terrainKey.hidden = !active;
   terrainOverlay.hidden = !active || !terrainGrid;
   if (active && !terrainGrid) {
@@ -147,8 +151,8 @@ function updateTerrainOverlay() {
     terrainOverlayStatus.hidden = false;
     terrainOverlayStatus.textContent = terrainStatus === "loading"
       ? "Loading terrain data…" : "Terrain data unavailable for this map.";
-  } else if (active && paintedTerrain !== terrainGrid) {
-    const surfaces = Terrain.drawSurfaceOverlay(terrainOverlay, terrainGrid);
+  } else if (active && (paintedTerrain !== terrainGrid || paintedWater !== water)) {
+    const surfaces = Terrain.drawSurfaceOverlay(terrainOverlay, terrainGrid, water);
     terrainLegend.replaceChildren(...(surfaces ?? []).map(([type, color]) => {
       const item = document.createElement("li");
       const swatch = document.createElement("span");
@@ -165,6 +169,7 @@ function updateTerrainOverlay() {
     } else {
       terrainOverlayStatus.textContent = surfaces.length ? "" : "No terrain samples for this map.";
       paintedTerrain = terrainGrid;
+      paintedWater = water;
     }
   }
   updateTerrainCursor();
@@ -836,7 +841,7 @@ function updateTerrainCursor() {
     terrainCursor.hidden = true;
     return;
   }
-  const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain);
+  const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain, paintedWater);
   const label = surface ? surfaceName(surface.type) : "No terrain sample";
   if (terrainCursor.textContent !== label) terrainCursor.textContent = label;
   terrainCursor.hidden = false;

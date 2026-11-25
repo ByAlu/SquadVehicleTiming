@@ -16,6 +16,7 @@ const Terrain = (() => {
     Metal: "#66849d", Mud: "#654239", Plaster: "#efcfad", Plastic: "#d08ddb", Rock: "#626271",
     Sand: "#f0d283", Snow: "#f4f8ff", Tile: "#86b1b2", Unknown: "#505963", Water: "#4194e3", Wood: "#ad8750",
   };
+  const waterSurface = { type: "Water" };
 
   async function load(map) {
     const script = document.createElement("script");
@@ -40,30 +41,29 @@ const Terrain = (() => {
     return data;
   }
 
-  function drawSurfaceOverlay(canvas, terrain) {
+  function drawSurfaceOverlay(canvas, terrain, water = null) {
     const context = canvas.getContext("2d");
     if (!context) return null;
-    const { columns, rows } = terrain.grid;
+    const { columns, rows } = water?.grid ?? terrain.grid;
     canvas.width = columns;
     canvas.height = rows;
     const image = context.createImageData(columns, rows);
-    const surfaces = terrain.surfaces.map(({ type }) => {
-      const color = surfaceColors[type] ?? surfaceColors.Unknown;
+    const colors = new Map(Object.entries(surfaceColors).map(([type, color]) => {
       const rgb = Number.parseInt(color.slice(1), 16);
-      return { type, color, red: rgb >> 16, green: (rgb >> 8) & 255, blue: rgb & 255 };
-    });
+      return [type, { color, red: rgb >> 16, green: (rgb >> 8) & 255, blue: rgb & 255 }];
+    }));
     const legend = new Map();
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < columns; x++) {
-        const cell = terrain.rows[y]?.[x];
-        const surface = surfaces[cell?.[3]];
+        const surface = surfaceAt((x + 0.5) / columns, (y + 0.5) / rows, terrain, water);
         if (!surface) continue;
+        const { color, red, green, blue } = colors.get(surface.type) ?? colors.get("Unknown");
         const offset = (y * columns + x) * 4;
-        image.data[offset] = surface.red;
-        image.data[offset + 1] = surface.green;
-        image.data[offset + 2] = surface.blue;
+        image.data[offset] = red;
+        image.data[offset + 1] = green;
+        image.data[offset + 2] = blue;
         image.data[offset + 3] = 255;
-        legend.set(surface.type, surface.color);
+        legend.set(surface.type, color);
       }
     }
     context.putImageData(image, 0, 0);
@@ -76,7 +76,17 @@ const Terrain = (() => {
     return terrain.rows[Math.min(rows - 1, Math.floor(y * rows))]?.[Math.min(columns - 1, Math.floor(x * columns))];
   }
 
-  function surfaceAt(x, y, terrain) {
+  function surfaceAt(x, y, terrain, water = null) {
+    if (water) {
+      if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+      const { columns, rows } = water.grid;
+      const column = Math.min(columns - 1, Math.floor(x * columns));
+      const row = Math.min(rows - 1, Math.floor(y * rows));
+      if (water.rows[row]?.[column] === "#") return waterSurface;
+      // Sample at the overlay pixel center so the cursor matches the painted surface.
+      x = (column + 0.5) / columns;
+      y = (row + 0.5) / rows;
+    }
     return terrain.surfaces[sampleCell(x, y, terrain)?.[3]] ?? null;
   }
 
