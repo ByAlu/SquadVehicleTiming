@@ -13,6 +13,13 @@
           "/Game/Vehicles/BMP-2M/BP_BMP2M_Desert.BP_BMP2M_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 3000000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.9711,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BMP-2/Configs/BP_BMP2_VehiceConfigTracked.BP_BMP2_VehiceConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

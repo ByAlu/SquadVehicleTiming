@@ -12,6 +12,13 @@
           "/Game/Vehicles/BMP-1/BP_BMP1_INS_ZU23.BP_BMP1_INS_ZU23_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 3000000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.9711,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BMP-1/Configs/BP_BMP1_VehicleConfigTracked.BP_BMP1_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

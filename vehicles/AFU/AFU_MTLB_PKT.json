@@ -12,6 +12,13 @@
           "/Game/Vehicles/MTLB_AFU/BP_MTLB_AFU.BP_MTLB_AFU_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2000000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 63000.0,
+          "forwardDragCoefficient": 0.700119,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/MTLB/Configs/BP_MTLB_VehicleConfigTracked.BP_MTLB_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

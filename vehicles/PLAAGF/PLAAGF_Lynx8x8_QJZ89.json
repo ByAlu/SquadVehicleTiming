@@ -12,6 +12,13 @@
           "/Game/Vehicles/Lynx_8x8/BP_LynxATV_Rollcage_QJZ89.BP_LynxATV_Rollcage_QJZ89_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 800000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 52800.0,
+          "forwardDragCoefficient": 0.450077,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/Lynx_8x8/Configs/BP_LynxATV_VehicleConfigTracked.BP_LynxATV_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

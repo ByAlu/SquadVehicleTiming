@@ -13,6 +13,13 @@
           "/Game/Vehicles/ACV-15/BP_ACV-15_M2_Desert.BP_ACV-15_M2_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 5000000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.700119,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ACV-15/Configs/BP_ACV15_VehicleConfig_Tracked.BP_ACV15_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -5,6 +5,22 @@ const Driving = (() => {
   const gravity = 9.8;
   const fallbackFriction = 0.55;
   const speedStep = 0.15;
+  const waterPhysicsStep = 1 / 60;
+
+  function waterCruiseSpeedKmh(settings) {
+    const { thrustKgCmS2, densityKgCm3, surfaceAreaCm2, forwardDragCoefficient, fullDepthDragScale, massKg } =
+      settings ?? {};
+    if (![thrustKgCmS2, densityKgCm3, surfaceAreaCm2, forwardDragCoefficient, fullDepthDragScale, massKg]
+      .every((value) => Number.isFinite(value) && value > 0)) return null;
+
+    const drag = 0.5 * densityKgCm3 * surfaceAreaCm2 * forwardDragCoefficient;
+    // Solve thrust = scale * drag * speed² / (1 + drag * speed * step / mass).
+    const linear = thrustKgCmS2 * waterPhysicsStep / (massKg * fullDepthDragScale);
+    const constant = thrustKgCmS2 / (drag * fullDepthDragScale);
+    const speedCmS = (linear + Math.hypot(linear, 2 * Math.sqrt(constant))) / 2;
+    const speedKmh = speedCmS * 0.036;
+    return Number.isFinite(speedKmh) && speedKmh > 0 ? speedKmh : null;
+  }
 
   function engineTorque(keys, rpm) {
     if (rpm <= keys[0].rpm) return keys[0].nm;
@@ -244,7 +260,7 @@ const Driving = (() => {
     return travelTerrainPieceSeconds(pieces, model, speedLimitKmh).reduce((total, time) => total + time, 0);
   }
 
-  return { prepare, travelSeconds, travelLegSeconds, travelTerrainSeconds, travelTerrainPieceSeconds };
+  return { prepare, travelSeconds, travelLegSeconds, travelTerrainSeconds, travelTerrainPieceSeconds, waterCruiseSpeedKmh };
 })();
 
 if (typeof module !== "undefined") module.exports = Driving;

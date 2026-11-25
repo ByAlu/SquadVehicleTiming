@@ -13,6 +13,13 @@
           "/Game/Vehicles/ZBD04A/BP_ZBD04A_Desert.BP_ZBD04A_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 1850000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 80000.0,
+          "forwardDragCoefficient": 0.750128,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ZBD04A/Configs/BP_ZBD04A_VehicleConfigTracked.BP_ZBD04A_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

@@ -13,6 +13,13 @@
           "/Game/Vehicles/LAV25/BP_LAV25_Woodland.BP_LAV25_Woodland_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2200000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.500085,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/LAV25/Configs/BP_LAV25_VehicleConfig.BP_LAV25_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

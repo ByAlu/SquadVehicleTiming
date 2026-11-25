@@ -220,24 +220,35 @@ function addVehicle() {
   });
   const waterSpeedField = card.querySelector(".vehicle-water-speed");
   const waterSpeedInput = waterSpeedField.querySelector("input");
+  const waterSpeedLabel = waterSpeedField.querySelector(".vehicle-water-speed-label");
   waterSpeedInput.setAttribute("aria-label", `${vehicle.name} water speed in km/h`);
-  waterSpeedInput.value = waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh;
   waterSpeedInput.addEventListener("input", () => {
     if (waterSpeedField.hidden || !waterSpeedInput.validity.valid) return;
     comparison.waterSpeedKmh = waterSpeedInput.valueAsNumber;
     waterSpeeds.set(vehicle.id, comparison.waterSpeedKmh);
+    waterSpeedLabel.textContent = "Water speed (custom)";
     refreshVehicleEstimate(vehicleIndex);
   });
   waterSpeedInput.addEventListener("change", () => {
-    if (!waterSpeedInput.validity.valid) waterSpeedInput.value = comparison.waterSpeedKmh;
+    if (waterSpeedField.hidden) return;
+    if (waterSpeedInput.value === "") {
+      waterSpeeds.delete(vehicle.id);
+      applyConfiguration();
+    } else if (!waterSpeedInput.validity.valid) {
+      waterSpeedInput.value = comparison.waterSpeedKmh;
+    }
   });
   const applyConfiguration = () => {
     const profile = configurationSelect.value === "" ? null : vehicle.drivingProfiles[Number(configurationSelect.value)];
     comparison.model = profile ? drivingModels.get(profile) : null;
     comparison.tracked = profile?.tracked ?? (vehicle.type === "Tank" || /track/i.test(vehicle.type));
-    const amphibious = (profile ?? vehicle).amphibious;
-    comparison.waterSpeedKmh = amphibious ? waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh : 0;
-    waterSpeedInput.value = waterSpeeds.get(vehicle.id) ?? defaultWaterSpeedKmh;
+    const { amphibious, waterMotion } = profile ?? vehicle;
+    const calculated = amphibious ? Driving.waterCruiseSpeedKmh(waterMotion) : null;
+    const saved = waterSpeeds.get(vehicle.id);
+    const waterSpeed = saved ?? (calculated ? Math.max(0.1, Number(calculated.toFixed(1))) : defaultWaterSpeedKmh);
+    comparison.waterSpeedKmh = amphibious ? waterSpeed : 0;
+    waterSpeedInput.value = waterSpeed;
+    waterSpeedLabel.textContent = saved ? "Water speed (custom)" : calculated ? "Water speed (SDK estimate)" : "Water speed (fallback)";
     waterSpeedField.hidden = !amphibious;
     const detail = amphibious ? [vehicle.faction, vehicle.type, "Amphibious"] : [vehicle.faction, vehicle.type];
     card.querySelector(".vehicle-detail").textContent = detail.filter(Boolean).join(" · ");

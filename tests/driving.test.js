@@ -45,3 +45,21 @@ test("SDK downhill braking slows a descent while retaining a finite ETA from res
   assert.ok(Number.isFinite(withBraking));
   assert.ok(withBraking > travelSeconds(grade, distance, { ...slope, brakingFactor: 0 }));
 });
+
+test("water cruising speed balances the SDK drag sample against thrust", () => {
+  const settings = {
+    thrustKgCmS2: 199069.21875,
+    densityKgCm3: 0.000997,
+    surfaceAreaCm2: 10000,
+    forwardDragCoefficient: 1,
+    fullDepthDragScale: 1,
+    massKg: 10000,
+  };
+  assert.ok(Math.abs(Driving.waterCruiseSpeedKmh(settings) - 7.2) < 1e-5);
+  assert.ok(Driving.waterCruiseSpeedKmh({ ...settings, fullDepthDragScale: 0.5 }) > 7.2);
+  assert.equal(Driving.waterCruiseSpeedKmh({ ...settings, surfaceAreaCm2: 0 }), null);
+
+  const aav = { ...settings, thrustKgCmS2: 945136.5, surfaceAreaCm2: 105600,
+    forwardDragCoefficient: 0.450077, massKg: 29000 };
+  assert.ok(Math.abs(Driving.waterCruiseSpeedKmh(aav) - 7.2) < 1e-5);
+});

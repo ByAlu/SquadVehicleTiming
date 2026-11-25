@@ -67,7 +67,9 @@ The planner highlights blocked ground links and withholds ground-vehicle ETAs fo
 
 The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Non-amphibious ground routes avoid water at least 0.75 m deep, water where the scan found no support, and water classified by the terrain scan. Manual links through blocked water hide the route line and ETA.
 
-The vehicle catalog checks each ground variant for SDK flotation and a water thruster. Amphibious variants can route across mapped water, including cells without a sampled bed. Auto-routing checks mapped obstacles and uses the sampled grade or nearby bank slope to estimate shore access. Water timing uses the editable water speed, which defaults to 10 km/h, and applies the ground model to each land stretch.
+The vehicle catalog checks each ground variant for SDK flotation and a water thruster. Amphibious variants can route across mapped water, including cells without a sampled bed. Auto-routing checks mapped obstacles and uses the sampled grade or nearby bank slope to estimate shore access.
+
+The planner estimates cruising speed by balancing SDK thruster force against straight-line drag at full configured depth damping in calm water. The calculation uses a 60 Hz reference step. A vehicle with no configured drag area uses its SDK width times height as an estimate. The resulting speed drives both route choice and water ETA, while the ground model handles each land stretch. Edit the water speed to override the estimate or clear it to restore the default. Vehicles without usable SDK inputs default to 10 km/h.
 
 Regenerate the mask after re-exporting a map's collision grid.
 

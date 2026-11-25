@@ -13,6 +13,13 @@
           "/Game/Vehicles/BTR80/82A/BP_BTR82A_RUS_Desert.BP_BTR82A_RUS_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2600000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.425073,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR80/Configs/BP_BTR80_VehicleConfig.BP_BTR80_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

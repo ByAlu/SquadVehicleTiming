@@ -12,6 +12,13 @@
           "/Game/Vehicles/BRDM-2/BP_BRDM-2_MIL.BP_BRDM-2_MIL_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 1800000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.41257,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BRDM-2/Configs/BP_BRDM-2_VehicleConfig.BP_BRDM-2_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

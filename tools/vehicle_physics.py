@@ -105,17 +105,41 @@ def config_data(asset):
     return result
 
 
-def is_amphibious(blueprint, default):
+def water_motion(blueprint, default):
     buoyancy = read_property(read_property(default, "buoyancy_component"), "buoyancy_data")
     if not read_property(buoyancy, "pontoons"):
-        return False
+        return None
     asset = unreal.load_asset(blueprint.get_path_name().split(".", 1)[0])
     subsystem = unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
     subobjects = unreal.SubobjectDataBlueprintFunctionLibrary
-    return asset is not None and any(
-        isinstance(subobjects.get_object(subobjects.get_data(handle)), unreal.SQWaterThrusterComponent)
-        for handle in subsystem.k2_gather_subobject_data_for_blueprint(asset)
-    )
+    if not asset:
+        return None
+    components = [subobjects.get_object(subobjects.get_data(handle))
+                  for handle in subsystem.k2_gather_subobject_data_for_blueprint(asset)]
+    thrusters = [component for component in components if isinstance(component, unreal.SQWaterThrusterComponent)]
+    if not thrusters:
+        return None
+
+    drag = read_property(buoyancy, "drag_setup")
+    alpha = read_property(drag, "alpha_drag")
+    alpha_curve = read_property(alpha, "curve")
+    depth_curve = read_property(drag, "depth_dampening_curve")
+    forces = [read_property(thruster, "force") for thruster in thrusters]
+    if (not read_property(buoyancy, "apply_drag_forces_in_water") or not read_property(alpha, "active")
+            or not alpha_curve or not depth_curve or any(force is None for force in forces)):
+        return {}
+    # Straight-ahead flow samples the SDK's longitudinal drag curve at zero incidence.
+    multiplier = read_property(alpha, "multiplier")
+    if multiplier is None:
+        return {}
+    values = {
+        "thrustKgCmS2": sum(forces),
+        "densityKgCm3": round(unreal.SQWaterBlueprintLibrary.get_default_water_density(), 9),
+        "surfaceAreaCm2": read_property(drag, "surface_area"),
+        "forwardDragCoefficient": round(multiplier * alpha_curve.get_float_value(0), 6),
+        "fullDepthDragScale": round(depth_curve.get_float_value(1), 6),
+    }
+    return values if all(type(value) in (int, float) and math.isfinite(value) for value in values.values()) else {}
 
 
 def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
@@ -141,7 +165,7 @@ def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
                 variants.setdefault(vehicle_id, {})[blueprint.get_path_name()] = blueprint
 
     profiles = {}
-    amphibious_by_blueprint = {}
+    water_by_blueprint = {}
     matched = 0
     configured = 0
     for vehicle in vehicles:
@@ -156,16 +180,18 @@ def enrich(vehicles, row_ids, vehicle_settings, sdk_version):
             movement_class = movement.get_class().get_name() if movement else None
             config = read_property(movement, "VehicleConfigAsset")
             config_path = config.get_path_name() if config else None
-            amphibious = False
+            water = None
             if vehicle["type"] not in ("Boat", "Helicopter"):
-                if path not in amphibious_by_blueprint:
-                    amphibious_by_blueprint[path] = is_amphibious(blueprint, default)
-                amphibious = amphibious_by_blueprint[path]
-            key = (movement_class, config_path, amphibious)
+                if path not in water_by_blueprint:
+                    water_by_blueprint[path] = water_motion(blueprint, default)
+                water = water_by_blueprint[path]
+            key = (movement_class, config_path, tuple(water.items()) if water is not None else None)
             if key not in groups:
                 profile = {"blueprints": []}
-                if amphibious:
+                if water is not None:
                     profile["amphibious"] = True
+                if water:
+                    profile["waterMotion"] = water
                 if movement_class:
                     profile["movementClass"] = movement_class
                 if config_path:

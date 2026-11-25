@@ -12,6 +12,13 @@
           "/Game/Vehicles/BTR80/BP_BTR80_Militia.BP_BTR80_Militia_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2600000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.425073,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR80/Configs/BP_BTR80_VehicleConfig.BP_BTR80_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

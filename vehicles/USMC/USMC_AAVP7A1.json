@@ -13,6 +13,13 @@
           "/Game/Vehicles/AAVP7A1/BP_AAVP7A1_Woodland.BP_AAVP7A1_Woodland_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 4500000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 105600.0,
+          "forwardDragCoefficient": 0.450077,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/AAVP7A1/Configs/BP_AAVP7A1_VehicleConfigTracked.BP_AAVP7A1_VehicleConfigTracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",

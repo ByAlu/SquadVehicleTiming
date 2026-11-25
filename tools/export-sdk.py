@@ -178,6 +178,23 @@ def write_vehicle_files(vehicles):
             path.unlink()
 
 
+def water_model(variant):
+    water = variant.get("waterMotion")
+    if not water:
+        return None
+    body = variant.get("body", {})
+    area = water.get("surfaceAreaCm2")
+    if area == 0:
+        width, height = body.get("width"), body.get("height")
+        if not all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in (width, height)):
+            return None
+        area = width * height
+    result = {**water, "surfaceAreaCm2": area, "massKg": body.get("mass")}
+    if all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in result.values()):
+        return result
+    return None
+
+
 def driving_profile(variant):
     speed_limit = variant.get("noSlipRpmLimitKmh", {}).get("forward")
     body = variant.get("body", {})
@@ -270,6 +287,8 @@ def driving_profile(variant):
         profile["slope"] = {key: round(value, 6) for key, value in slope.items()}
     if variant.get("amphibious"):
         profile["amphibious"] = True
+        if water := water_model(variant):
+            profile["waterMotion"] = water
     return profile
 
 
@@ -290,6 +309,9 @@ def build_vehicle_catalog():
             vehicle["drivingProfiles"] = profiles
         elif variants and all(variant.get("amphibious") for variant in variants):
             vehicle["amphibious"] = True
+            water = water_model(variants[0])
+            if water and all(water_model(variant) == water for variant in variants):
+                vehicle["waterMotion"] = water
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"

@@ -13,6 +13,13 @@
           "/Game/Vehicles/WZ551/BP_WZ551B_QLZ-87_Desert.BP_WZ551B_QLZ-87_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2600000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.425073,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/WZ551/Configs/BP_WZ551_VehicleConfig.BP_WZ551_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

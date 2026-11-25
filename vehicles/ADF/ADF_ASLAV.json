@@ -12,6 +12,13 @@
           "/Game/Vehicles/ASLAV/BP_ASLAV.BP_ASLAV_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2200000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.500085,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQWheeledVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/ASLAV/Configs/BP_ASLAV_VehicleConfig.BP_ASLAV_VehicleConfig",
         "configClass": "ODKWheeledVehicleConfigAsset",

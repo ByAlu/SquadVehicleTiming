@@ -13,6 +13,13 @@
           "/Game/Vehicles/BTR-D/BP_BTR-D_Kord_Desert.BP_BTR-D_Kord_Desert_C"
         ],
         "amphibious": true,
+        "waterMotion": {
+          "thrustKgCmS2": 2000000.0,
+          "densityKgCm3": 0.000997,
+          "surfaceAreaCm2": 0.0,
+          "forwardDragCoefficient": 0.9711,
+          "fullDepthDragScale": 1.0
+        },
         "movementClass": "SQTrackedVehicleMovementComponent",
         "configAsset": "/Game/Vehicles/BTR-D/Configs/BP_BTR-D_Transport_VehicleConfig_Tracked.BP_BTR-D_Transport_VehicleConfig_Tracked",
         "configClass": "ODKTrackedVehicleConfigAssetNew",
