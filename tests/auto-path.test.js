@@ -61,9 +61,51 @@ test("auto-routing falls back to mapped water when depth data is unavailable", (
   const start = { x: 0.1, y: 0.5 };
   const end = { x: 0.9, y: 0.5 };
   assert.equal(AutoPath.find(start, end, terrain, 12, 4, { tracked: false, speedKmh: 65, collision }), null);
-  collision.water = { grid, rows: ["#.."] };
-  const mapped = { x: 0.5, y: 0.5 };
-  assert.equal(Collision.segment(mapped, mapped, Collision.waterGrid(terrain, collision)), "blocked");
+});
+
+test("measured water depth allows a ground route through a shallow Water surface", () => {
+  const grid = { columns: 4, rows: 1 };
+  const land = [0, 0, 0, 0];
+  const water = [0, 0, 0, 1];
+  const terrain = { grid, rows: [[land, water, land, water]], surfaces: [{ type: "Dirt" }, { type: "Water" }] };
+  const collision = { grid, rows: ["...."], water: { grid, rows: ["...#"] } };
+  const start = { x: 0.125, y: 0.5 };
+  const shore = { x: 0.625, y: 0.5 };
+  const deep = { x: 0.875, y: 0.5 };
+  const options = { tracked: false, speedKmh: 65, collision };
+
+  const mask = Collision.waterGrid(terrain, collision);
+  assert.equal(Collision.path([start, shore], mask), "clear");
+  assert.equal(Collision.path([start, deep], mask), "blocked");
+  assert.equal(AutoPath.find(start, shore, terrain, 16, 4, options)?.direct, true);
+  assert.equal(AutoPath.find(start, deep, terrain, 16, 4, options), null);
+  assert.equal(AutoPath.find(start, deep, terrain, 16, 4, { ...options, waterSpeedKmh: 10 })?.direct, true);
+
+  const timedWater = Collision.waterGrid(terrain, collision, true);
+  const shallow = Terrain.sampleRoute([start, shore], 16, 4, terrain, null, timedWater);
+  assert.equal(shallow.waterMeters, 0);
+  assert.ok(shallow.pieces.some((piece) => piece.surface?.type === "Water" && !piece.water));
+});
+
+test("a depth scan with no deep water takes precedence over terrain Water", async (t) => {
+  const grid = { columns: 1, rows: 1 };
+  const terrain = { grid, rows: [[[0, 0, 0, 0]]], surfaces: [{ type: "Water" }] };
+  global.document = {
+    createElement: () => ({ remove() {} }),
+    head: {
+      append(element) {
+        element.collisionData = { map: "Test", schemaVersion: 1, grid, rows: ["."] };
+        element.onload();
+      },
+    },
+  };
+  t.after(() => { delete global.document; });
+  const collision = await Collision.load({ name: "Test" }, [1, 1]);
+
+  assert.deepEqual(Collision.waterGrid(terrain, collision).rows, ["."]);
+  assert.equal(AutoPath.find({ x: 0.25, y: 0.5 }, { x: 0.75, y: 0.5 }, terrain, 4, 4, {
+    tracked: false, speedKmh: 65, collision,
+  })?.direct, true);
 });
 
 test("amphibious routing crosses water without ground support and still avoids mapped blockers", () => {
@@ -99,10 +141,9 @@ test("amphibious auto-routing rejects a steep bank above unsampled water", () =>
   assert.equal(AutoPath.find({ x: 0.25, y: 0.5 }, { x: 0.75, y: 0.5 }, terrain, 8, 4, options), null);
 });
 
-test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {
+function loadMapCollision(t, name) {
   const script = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../water-data.js"), "utf8"), script);
-  const name = "Black Coast";
   const directory = path.join(__dirname, "../maps", name);
   global.document = {
     createElement: () => ({ remove() {} }),
@@ -115,7 +156,13 @@ test("Black Coast water data blocks cells the vehicle collision scan marked clea
     },
   };
   t.after(() => { delete global.document; });
-  const collision = await Collision.load({ name }, script.window.squadWaterData[name]);
+  return Collision.load({ name }, script.window.squadWaterData[name]);
+}
+
+test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {
+  const name = "Black Coast";
+  const directory = path.join(__dirname, "../maps", name);
+  const collision = await loadMapCollision(t, name);
   const terrain = JSON.parse(fs.readFileSync(path.join(directory, "terrain.json"), "utf8"));
   const shore = { x: 0.555, y: 0.8 };
   const water = { x: 0.255, y: 0.8 };
@@ -127,4 +174,35 @@ test("Black Coast water data blocks cells the vehicle collision scan marked clea
   assert.equal(Collision.segment(water, water, collision), "clear");
   assert.equal(Collision.segment(water, water, mask), "blocked");
   assert.equal(AutoPath.find(shore, water, terrain, width, height, { tracked: false, speedKmh: 65, collision }), null);
+});
+
+test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {
+  const name = "Gorodok";
+  const terrain = require("../maps/Gorodok/terrain.json");
+  const collision = await loadMapCollision(t, name);
+  const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
+  const start = { x: 946.5 / columns, y: 137.5 / rows };
+  const end = { x: 948.5 / columns, y: start.y };
+
+  assert.equal(Collision.segment(start, end, Collision.waterGrid(terrain, collision)), "clear");
+  assert.equal(AutoPath.find(start, end, terrain, columns * columnSpacingMeters, rows * rowSpacingMeters, {
+    tracked: false, speedKmh: 65, collision,
+  })?.direct, true);
+});
+
+test("Tallil Outskirts permits ground routing through a shallow crossing", async (t) => {
+  const name = "Tallil Outskirts";
+  const terrain = require("../maps/Tallil Outskirts/terrain.json");
+  const collision = await loadMapCollision(t, name);
+  const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
+  const start = { x: 497.5 / columns, y: 106.5 / rows };
+  const end = { x: 505.5 / columns, y: start.y };
+  const mask = Collision.waterGrid(terrain, collision);
+
+  assert.ok(mask.rows.every((row) => !row.includes("#")));
+  assert.equal(Collision.segment(start, end, collision), "clear");
+  assert.equal(Collision.segment(start, end, mask), "clear");
+  assert.equal(AutoPath.find(start, end, terrain, columns * columnSpacingMeters, rows * rowSpacingMeters, {
+    tracked: false, speedKmh: 65, collision,
+  })?.direct, true);
 });

@@ -3,7 +3,7 @@
 const Collision = (() => {
   const elevationsByGrid = new WeakMap();
   const mappedWaterByTerrain = new WeakMap();
-  const combinedWaterByCollision = new WeakMap();
+  const alignedWaterByCollision = new WeakMap();
 
   function elevations(data) {
     if (!data?.elevationDmInt16Le) return null;
@@ -45,7 +45,8 @@ const Collision = (() => {
   }
 
   function decodeWater(grid, [columns, rows, ...ranges]) {
-    if (columns !== grid.columns || rows !== grid.rows || !ranges.length) return null;
+    if (columns !== grid.columns || rows !== grid.rows) return null;
+    if (!ranges.length) return { grid, rows: Array(rows).fill(".".repeat(columns)) };
     const cells = new Uint8Array(columns * rows).fill(".".charCodeAt(0));
     const blocked = "#".charCodeAt(0);
     for (let index = 0; index < ranges.length; index += 2) {
@@ -57,8 +58,8 @@ const Collision = (() => {
   }
 
   function waterGrid(terrain, collision, alignToCollision = false) {
-    const measured = collision?.water;
-    if (!terrain) return measured ?? null;
+    if (collision?.water) return collision.water;
+    if (!terrain) return null;
     if (!mappedWaterByTerrain.has(terrain)) {
       const water = terrain.surfaces.map((surface) => surface.type === "Water");
       const rows = water.includes(true)
@@ -67,21 +68,20 @@ const Collision = (() => {
       mappedWaterByTerrain.set(terrain, rows ? { grid: terrain.grid, rows } : null);
     }
     const mapped = mappedWaterByTerrain.get(terrain);
-    if (!collision || !mapped || (!measured && !alignToCollision)) return measured ?? mapped;
-    if (!combinedWaterByCollision.has(collision)) {
+    if (!collision || !mapped || !alignToCollision) return mapped;
+    if (!alignedWaterByCollision.has(collision)) {
       const { grid } = collision;
       const columns = Int32Array.from({ length: grid.columns }, (_, x) =>
         Math.floor((x + 0.5) * mapped.grid.columns / grid.columns));
       const dry = ".".repeat(grid.columns);
       const rows = Array.from({ length: grid.rows }, (_, y) => {
-        const line = measured?.rows[y] ?? dry;
         const mappedLine = mapped.rows[Math.floor((y + 0.5) * mapped.grid.rows / grid.rows)];
-        if (!mappedLine.includes("#")) return line;
-        return Array.from(line, (cell, x) => mappedLine[columns[x]] === "#" ? "#" : cell).join("");
+        if (!mappedLine.includes("#")) return dry;
+        return Array.from(columns, (column) => mappedLine[column]).join("");
       });
-      combinedWaterByCollision.set(collision, { grid, rows });
+      alignedWaterByCollision.set(collision, { grid, rows });
     }
-    return combinedWaterByCollision.get(collision);
+    return alignedWaterByCollision.get(collision);
   }
 
   function segment(a, b, data, water = null) {

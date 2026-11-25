@@ -148,7 +148,6 @@ const Terrain = (() => {
           sampledMeters += horizontal;
           surface = terrain.surfaces[cell[3]];
           if (isClassified(surface)) classifiedMeters += horizontal;
-          if (surface.type === "Water") waterMeters += horizontal;
           if (measuredGrade !== null) {
             grade = measuredGrade;
           } else if (cell[1] !== null && cell[2] !== null) {

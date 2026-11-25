@@ -65,7 +65,7 @@ The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision pr
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 
-The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Non-amphibious ground routes avoid water at least 0.75 m deep, water where the scan found no support, and water classified by the terrain scan. Manual links through blocked water hide the route line and ETA.
+The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Non-amphibious ground routes avoid water at least 1.5 m deep and water where the scan found no support. They can cross shallower water when the collision grid shows clear ground. When a depth scan is unavailable, the planner uses the terrain scan's Water classification as a fallback. Manual links through blocked water hide the route line and ETA.
 
 The vehicle catalog checks each ground variant for SDK flotation and a water thruster. Amphibious variants can route across mapped water, including cells without a sampled bed. Auto-routing checks mapped obstacles and uses the sampled grade or nearby bank slope to estimate shore access.
 
