@@ -94,7 +94,7 @@ select {
 .map-top, .map-bottom { padding: .8rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
 .map-top h2 { margin: 0; font-size: 1.1rem; }
 .map-top p, .map-bottom { margin: .2rem 0 0; color: var(--muted); font-size: .85rem; }
-.node-time-toggle { display: flex; align-items: center; gap: .4rem; }
+.node-time-toggle { display: flex; align-items: center; gap: .4rem; margin: .5rem 0; color: var(--muted); font-size: .83rem; }
 .node-time-toggle input { width: auto; margin: 0; accent-color: var(--accent); }
 .tools { display: flex; flex-wrap: wrap; gap: .35rem; }
 .tools button, .vehicle-action {

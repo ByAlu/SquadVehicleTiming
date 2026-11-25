@@ -340,6 +340,22 @@ function estimatePath(node, width, height) {
   routeEstimates.set(node, estimates);
 }
 
+function linkEstimate(node, vehicleIndex) {
+  const estimate = routeEstimates.get(node)?.get(vehicleIndex);
+  if (!estimate || !node.parent) return null;
+
+  const parent = routeEstimates.get(node.parent)?.get(vehicleIndex);
+  const startSeconds = node.parent.parent ? parent?.seconds : 0;
+  const seconds = Number.isFinite(estimate.seconds) && Number.isFinite(startSeconds)
+    ? Math.max(0, estimate.seconds - startSeconds) : null;
+  const via = node.routes?.get(vehicleIndex);
+  const { ground, waterSpeedKmh } = comparisons.get(vehicleIndex);
+  return {
+    seconds,
+    collision: ground ? edgeCollision(node, via, waterSpeedKmh > 0) : null,
+  };
+}
+
 function updateEstimate() {
   for (const node of route) estimatePath(node, mapWidth, mapHeight);
   const estimates = routeEstimates.get(selectedNode);
@@ -391,9 +407,11 @@ function updateEstimate() {
     const item = document.createElement("li");
     const parent = node.parent ? `, connected to node ${route.indexOf(node.parent) + 1}` : ", start";
     const selection = node === selectedNode ? ", selected" : "";
-    const timing = showLegTimes.checked && node.parent ? "from parent" : "elapsed";
-    const times = [...comparisons].map(([vehicleIndex, { vehicle }]) =>
-      `${vehicle.name} (${vehicle.faction}), ${nodeTimeLabel(node, vehicleIndex)} ${timing}`);
+    const times = [...comparisons].map(([vehicleIndex, { vehicle }]) => {
+      const elapsed = `${vehicle.name} (${vehicle.faction}), ${nodeTimeLabel(node, vehicleIndex)} elapsed`;
+      if (!showLegTimes.checked || !node.parent) return elapsed;
+      return `${elapsed}, ${estimateTimeLabel(linkEstimate(node, vehicleIndex))} from parent`;
+    });
     item.textContent = [`Node ${index + 1}${parent}${selection}`, ...times].join(". ");
     return item;
   }));
@@ -520,20 +538,66 @@ function mapLabel(x, y, label, className) {
 
 function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
-  const estimate = routeEstimates.get(node)?.get(vehicleIndex);
+  return estimateTimeLabel(routeEstimates.get(node)?.get(vehicleIndex));
+}
+
+function estimateTimeLabel(estimate) {
   if (estimate?.collision === "blocked" || estimate?.collision === "water") return "Blocked";
-  let seconds = estimate?.seconds;
+  const seconds = estimate?.seconds;
   if (!Number.isFinite(seconds)) return "—";
-  if (showLegTimes.checked && node.parent.parent) {
-    const parentSeconds = routeEstimates.get(node.parent)?.get(vehicleIndex)?.seconds;
-    if (!Number.isFinite(parentSeconds)) return "—";
-    seconds = Math.max(0, seconds - parentSeconds);
-  }
   return seconds === 0 ? "0s" : RouteMath.formatTime(seconds);
+}
+
+function linkMidpoint(points) {
+  const distances = RouteMath.legDistances(points, drawnWidth, drawnHeight);
+  let remaining = distances.reduce((total, distance) => total + distance, 0) / 2;
+  for (const [index, distance] of distances.entries()) {
+    if (distance > 0 && remaining <= distance) {
+      const start = points[index];
+      const end = points[index + 1];
+      const fraction = remaining / distance;
+      return { x: start.x + (end.x - start.x) * fraction, y: start.y + (end.y - start.y) * fraction };
+    }
+    remaining -= distance;
+  }
+  return points[0];
+}
+
+function renderLinkTimes(markers, node) {
+  const groups = new Map();
+  const hasAutoRoute = [...comparisons.keys()].some((index) => node.routes?.has(index));
+  for (const [index, { color }] of comparisons) {
+    const via = node.routes?.get(index);
+    if (!via && hasAutoRoute) continue;
+    const estimate = linkEstimate(node, index);
+    if (estimate?.collision === "water") continue;
+    const point = linkMidpoint(edgePoints(node, via));
+    const x = point.x * drawnWidth;
+    const y = point.y * drawnHeight;
+    const key = `${x},${y}`;
+    const group = groups.get(key) ?? { x, y, times: [] };
+    const time = estimateTimeLabel(estimate);
+    group.times.push({ color, time: Number.isFinite(estimate?.seconds) ? `+${time}` : time });
+    groups.set(key, group);
+  }
+  for (const { x, y, times } of groups.values()) {
+    const startY = Math.max(10, y - 7 - (times.length - 1) * 15);
+    for (const [index, { color, time }] of times.entries()) {
+      const label = mapLabel(x, startY + index * 15, time, "node-time link-time");
+      label.setAttribute("text-anchor", "middle");
+      label.style.color = color;
+      markers.append(label);
+    }
+  }
 }
 
 function renderRouteLabels() {
   const markers = document.createDocumentFragment();
+  if (showLegTimes.checked) {
+    for (const node of route) {
+      if (node.parent) renderLinkTimes(markers, node);
+    }
+  }
   route.forEach((point, index) => {
     const x = point.x * drawnWidth;
     const y = point.y * drawnHeight;
