@@ -15,6 +15,12 @@ const viewport = find("viewport");
 const stage = find("stage");
 const image = find("map-image");
 const overlay = find("overlay");
+const terrainOverlay = find("terrain-overlay");
+const terrainOverlayToggle = find("terrain-overlay-toggle");
+const terrainKey = find("terrain-key");
+const terrainLegend = find("terrain-legend");
+const terrainOverlayStatus = find("terrain-overlay-status");
+const terrainCursor = find("terrain-cursor");
 const cursor = find("cursor");
 const mapMessage = find("map-message");
 const svgNamespace = "http://www.w3.org/2000/svg";
@@ -46,6 +52,8 @@ let drawnHeight = 0;
 let mapWidth = 0;
 let mapHeight = 0;
 let terrainGrid = null;
+let paintedTerrain = null;
+let terrainPointer = null;
 let terrainStatus = "unavailable";
 let collisionGrid = null;
 let collisionStatus = "unavailable";
@@ -58,7 +66,9 @@ function selectMap() {
   mapWidth = map.widthMeters ?? 0;
   mapHeight = map.heightMeters ?? 0;
   terrainGrid = null;
+  paintedTerrain = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
+  updateTerrainOverlay();
   collisionGrid = null;
   collisionStatus = map.sourceLayer ? "loading" : "unavailable";
   clearRoute();
@@ -109,6 +119,7 @@ function selectMap() {
       if (request !== loadId) return;
       terrainGrid = grid;
       terrainStatus = "ready";
+      updateTerrainOverlay();
       collisionEdges.clear();
       routeEstimates.clear();
       updateEstimate();
@@ -116,10 +127,47 @@ function selectMap() {
     }).catch(() => {
       if (request !== loadId) return;
       terrainStatus = "unavailable";
+      updateTerrainOverlay();
       updateEstimate();
       updateButtons();
     });
   }
+}
+
+function surfaceName(type) {
+  return type.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function updateTerrainOverlay() {
+  const active = terrainOverlayToggle.getAttribute("aria-pressed") === "true";
+  terrainKey.hidden = !active;
+  terrainOverlay.hidden = !active || !terrainGrid;
+  if (active && !terrainGrid) {
+    terrainLegend.replaceChildren();
+    terrainOverlayStatus.hidden = false;
+    terrainOverlayStatus.textContent = terrainStatus === "loading"
+      ? "Loading terrain data…" : "Terrain data unavailable for this map.";
+  } else if (active && paintedTerrain !== terrainGrid) {
+    const surfaces = Terrain.drawSurfaceOverlay(terrainOverlay, terrainGrid);
+    terrainLegend.replaceChildren(...(surfaces ?? []).map(([type, color]) => {
+      const item = document.createElement("li");
+      const swatch = document.createElement("span");
+      swatch.className = "terrain-swatch";
+      swatch.setAttribute("aria-hidden", "true");
+      swatch.style.backgroundColor = color;
+      item.append(swatch, surfaceName(type));
+      return item;
+    }));
+    terrainOverlayStatus.hidden = Boolean(surfaces?.length);
+    if (!surfaces) {
+      terrainOverlay.hidden = true;
+      terrainOverlayStatus.textContent = "Terrain overlay unavailable in this browser.";
+    } else {
+      terrainOverlayStatus.textContent = surfaces.length ? "" : "No terrain samples for this map.";
+      paintedTerrain = terrainGrid;
+    }
+  }
+  updateTerrainCursor();
 }
 
 function selectFaction() {
@@ -726,6 +774,7 @@ function positionMap() {
   left = maxLeft > 0 ? maxLeft / 2 : Math.max(maxLeft, Math.min(left, 0));
   mapTop = maxTop > 0 ? maxTop / 2 : Math.max(maxTop, Math.min(mapTop, 0));
   stage.style.transform = `translate(${left}px, ${mapTop}px)`;
+  updateTerrainCursor();
 }
 
 function layoutMap(nextZoom, anchorX, anchorY) {
@@ -771,6 +820,33 @@ function mapPoint(point) {
 
 function inside({ x, y }) {
   return x >= 0 && x <= 1 && y >= 0 && y <= 1;
+}
+
+function updateTerrainCursor() {
+  if (terrainOverlay.hidden || !paintedTerrain || !drawnWidth || !drawnHeight) {
+    terrainCursor.hidden = true;
+    return;
+  }
+  const point = terrainPointer ? localPoint(terrainPointer) : keyboardActive
+    ? { x: left + keyboardPoint.x * drawnWidth, y: mapTop + keyboardPoint.y * drawnHeight }
+    : null;
+  const normalized = point && mapPoint(point);
+  if (!point || point.x < 0 || point.x >= viewport.clientWidth || point.y < 0 || point.y >= viewport.clientHeight ||
+      !inside(normalized)) {
+    terrainCursor.hidden = true;
+    return;
+  }
+  const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain);
+  const label = surface ? surfaceName(surface.type) : "No terrain sample";
+  if (terrainCursor.textContent !== label) terrainCursor.textContent = label;
+  terrainCursor.hidden = false;
+  const gap = 12;
+  const width = terrainCursor.offsetWidth;
+  const height = terrainCursor.offsetHeight;
+  const x = point.x + gap + width <= viewport.clientWidth ? point.x + gap : Math.max(0, point.x - gap - width);
+  const y = point.y + gap + height <= viewport.clientHeight ? point.y + gap : Math.max(0, point.y - gap - height);
+  terrainCursor.style.left = `${x}px`;
+  terrainCursor.style.top = `${y}px`;
 }
 
 function nodeIndexAt(point) {
@@ -838,22 +914,32 @@ viewport.addEventListener("pointerdown", (event) => {
   if (mode === "draw" && !inside(point)) return;
   viewport.focus({ preventScroll: true });
   keyboardActive = false;
+  terrainPointer = event.pointerType === "touch" ? null : { clientX: event.clientX, clientY: event.clientY };
   gesture = { id: event.pointerId, position, moved: false };
   viewport.setPointerCapture(event.pointerId);
   renderRoute();
+  updateTerrainCursor();
 });
 
 viewport.addEventListener("pointermove", (event) => {
-  if (gesture?.id !== event.pointerId) return;
-  const position = localPoint(event);
-  if (mode === "pan") {
-    left += position.x - gesture.position.x;
-    mapTop += position.y - gesture.position.y;
-    gesture.position = position;
-    positionMap();
-  } else if (Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) > 5) {
-    gesture.moved = true;
+  terrainPointer = event.pointerType === "touch" ? null : { clientX: event.clientX, clientY: event.clientY };
+  if (gesture?.id === event.pointerId) {
+    const position = localPoint(event);
+    if (mode === "pan") {
+      left += position.x - gesture.position.x;
+      mapTop += position.y - gesture.position.y;
+      gesture.position = position;
+      positionMap();
+      return;
+    }
+    if (Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) > 5) gesture.moved = true;
   }
+  updateTerrainCursor();
+});
+
+viewport.addEventListener("pointerleave", () => {
+  terrainPointer = null;
+  updateTerrainCursor();
 });
 
 for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
@@ -889,6 +975,7 @@ viewport.addEventListener("keydown", (event) => {
   if (Object.hasOwn(directions, event.key)) {
     const [dx, dy] = directions[event.key];
     keyboardActive = true;
+    terrainPointer = null;
     keyboardPoint.x = Math.max(0, Math.min(1, keyboardPoint.x + dx * 12 / drawnWidth));
     keyboardPoint.y = Math.max(0, Math.min(1, keyboardPoint.y + dy * 12 / drawnHeight));
     const x = left + keyboardPoint.x * drawnWidth;
@@ -899,7 +986,9 @@ viewport.addEventListener("keydown", (event) => {
     renderRoute();
   } else if ((event.key === "Enter" || event.key === " ") && mode === "draw") {
     keyboardActive = true;
+    terrainPointer = null;
     selectOrAddNode(keyboardPoint);
+    updateTerrainCursor();
   } else if (event.key === "Delete" && keyboardActive) {
     removeNodeAt(keyboardPoint);
   } else if (event.key === "+" || event.key === "=") {
@@ -917,6 +1006,7 @@ viewport.addEventListener("keydown", (event) => {
 viewport.addEventListener("blur", () => {
   keyboardActive = false;
   renderRoute();
+  updateTerrainCursor();
 });
 
 if (sdk?.maps.length && vehicles?.length) {
@@ -937,6 +1027,10 @@ if (sdk?.maps.length && vehicles?.length) {
   autoPathButton.addEventListener("click", autoRouteLink);
   removeAutoPathButton.addEventListener("click", removeAutoRoute);
   showLegTimes.addEventListener("change", updateEstimate);
+  terrainOverlayToggle.addEventListener("click", () => {
+    terrainOverlayToggle.setAttribute("aria-pressed", String(terrainOverlayToggle.getAttribute("aria-pressed") !== "true"));
+    updateTerrainOverlay();
+  });
   find("draw").addEventListener("click", () => setMode("draw"));
   find("pan").addEventListener("click", () => setMode("pan"));
   find("undo").addEventListener("click", undo);

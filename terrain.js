@@ -9,6 +9,13 @@ const Terrain = (() => {
     Rock: [0.76, 0.84], LooseRocks: [0.69, 0.82], Clay: [0.71, 0.84],
     Sand: [0.6, 0.76], Mud: [0.47, 0.67], Snow: [0.64, 0.8],
   };
+  const surfaceColors = {
+    Asphalt: "#343c4e", Brick: "#d4654e", Bush: "#326341", Carpet: "#d16a98", Clay: "#ca7449",
+    Concrete: "#a4a7b1", Default: "#78817a", Dirt: "#a46a42", DirtGravel: "#c9946d", Glass: "#92f1e9",
+    Grass: "#6ea84b", GrassField: "#a9c665", Gravel: "#9a8173", Leaves: "#d7b84d", LooseRocks: "#836e9f",
+    Metal: "#66849d", Mud: "#654239", Plaster: "#efcfad", Plastic: "#d08ddb", Rock: "#626271",
+    Sand: "#f0d283", Snow: "#f4f8ff", Tile: "#86b1b2", Unknown: "#505963", Water: "#4194e3", Wood: "#ad8750",
+  };
 
   async function load(map) {
     const script = document.createElement("script");
@@ -31,6 +38,46 @@ const Terrain = (() => {
       throw new Error("Terrain bundle does not match the selected map.");
     }
     return data;
+  }
+
+  function drawSurfaceOverlay(canvas, terrain) {
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    const { columns, rows } = terrain.grid;
+    canvas.width = columns;
+    canvas.height = rows;
+    const image = context.createImageData(columns, rows);
+    const surfaces = terrain.surfaces.map(({ type }) => {
+      const color = surfaceColors[type] ?? surfaceColors.Unknown;
+      const rgb = Number.parseInt(color.slice(1), 16);
+      return { type, color, red: rgb >> 16, green: (rgb >> 8) & 255, blue: rgb & 255 };
+    });
+    const legend = new Map();
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < columns; x++) {
+        const cell = terrain.rows[y]?.[x];
+        const surface = surfaces[cell?.[3]];
+        if (!surface) continue;
+        const offset = (y * columns + x) * 4;
+        image.data[offset] = surface.red;
+        image.data[offset + 1] = surface.green;
+        image.data[offset + 2] = surface.blue;
+        image.data[offset + 3] = 255;
+        legend.set(surface.type, surface.color);
+      }
+    }
+    context.putImageData(image, 0, 0);
+    return [...legend].sort(([left], [right]) => left.localeCompare(right));
+  }
+
+  function sampleCell(x, y, terrain) {
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    const { columns, rows } = terrain.grid;
+    return terrain.rows[Math.min(rows - 1, Math.floor(y * rows))]?.[Math.min(columns - 1, Math.floor(x * columns))];
+  }
+
+  function surfaceAt(x, y, terrain) {
+    return terrain.surfaces[sampleCell(x, y, terrain)?.[3]] ?? null;
   }
 
   function groundGrade(x, y, ux, uy, width, height, ground) {
@@ -59,10 +106,7 @@ const Terrain = (() => {
     let classifiedMeters = 0;
     let waterMeters = 0;
 
-    function sample(x, y) {
-      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
-      return terrain.rows[Math.min(rows - 1, Math.floor(y * rows))][Math.min(columns - 1, Math.floor(x * columns))];
-    }
+    const sample = (x, y) => sampleCell(x, y, terrain);
 
     for (let index = 1; index < points.length; index++) {
       const start = points[index - 1];
@@ -140,7 +184,7 @@ const Terrain = (() => {
     });
   }
 
-  return { maxGrade, load, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
+  return { maxGrade, load, drawSurfaceOverlay, surfaceAt, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 
 if (typeof module !== "undefined") module.exports = Terrain;
