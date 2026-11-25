@@ -20,7 +20,7 @@ The exporter runs the installed Unreal Editor Python commandlet. It writes one J
 
 After editing vehicle JSON files, rebuild the browser catalog with `python tools/export-sdk.py --build-vehicles`. This command runs without the Squad SDK.
 
-The exporter writes minimap world dimensions to `sdk-data.js` using the gameplay layers' `MinimapCornersPosition` property. A map without a readable scale asks for its full image width and height in meters. You can also override a supplied scale under **Map scale**.
+The exporter writes minimap world dimensions to `sdk-data.js` using the gameplay layers' `MinimapCornersPosition` property. The planner uses these dimensions directly for distance, travel time, and auto-routing. Maps without SDK dimensions support drawing routes.
 
 ## Vehicle physics data
 

@@ -10,8 +10,6 @@ const addVehicleButton = find("add-vehicle");
 const autoPathButton = find("auto-path");
 const removeAutoPathButton = find("remove-auto-path");
 const autoPathStatus = find("auto-path-status");
-const widthInput = find("width");
-const heightInput = find("height");
 const viewport = find("viewport");
 const stage = find("stage");
 const image = find("map-image");
@@ -25,7 +23,6 @@ const vehicleColors = ["#e1fa91", "#85d9ff", "#ffc180", "#f0a7ef", "#91edc6", "#
 
 const route = [];
 const edits = [];
-const scales = new Map();
 const speeds = new Map();
 const configurations = new Map();
 const drivingModels = new WeakMap();
@@ -45,6 +42,8 @@ let left = 0;
 let mapTop = 0;
 let drawnWidth = 0;
 let drawnHeight = 0;
+let mapWidth = 0;
+let mapHeight = 0;
 let terrainGrid = null;
 let terrainStatus = "unavailable";
 let collisionGrid = null;
@@ -55,17 +54,18 @@ function selectMap() {
   finishGesture();
   const map = sdk.maps[mapSelect.selectedIndex];
   const request = ++loadId;
+  mapWidth = map.widthMeters ?? 0;
+  mapHeight = map.heightMeters ?? 0;
   terrainGrid = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
   collisionGrid = null;
   collisionStatus = map.sourceLayer ? "loading" : "unavailable";
   clearRoute();
-  const scale = scales.get(map.name) ?? [map.widthMeters ?? "", map.heightMeters ?? ""];
-  [widthInput.value, heightInput.value] = scale;
-  find("calibration").open = !map.widthMeters;
   find("map-heading").textContent = map.name;
   viewport.setAttribute("aria-label", `${map.name} route map`);
-  updateMapDetail();
+  find("map-detail").textContent = mapWidth >= 1 && mapHeight >= 1
+    ? `${numeric.format(mapWidth)} × ${numeric.format(mapHeight)} m · ${map.scaleLabel}`
+    : "SDK dimensions unavailable for this map.";
   updateEstimate();
   stage.classList.remove("ready");
   drawnWidth = 0;
@@ -118,16 +118,6 @@ function selectMap() {
       updateEstimate();
       updateButtons();
     });
-  }
-}
-
-function updateMapDetail() {
-  const map = sdk.maps[mapSelect.selectedIndex];
-  const manual = scales.has(map.name);
-  if (widthInput.validity.valid && heightInput.validity.valid && widthInput.value && heightInput.value) {
-    find("map-detail").textContent = `${numeric.format(widthInput.valueAsNumber)} × ${numeric.format(heightInput.valueAsNumber)} m · ${manual ? "Custom scale" : map.scaleLabel}`;
-  } else {
-    find("map-detail").textContent = "Enter the minimap width and height to measure this route.";
   }
 }
 
@@ -350,9 +340,7 @@ function estimatePath(node, width, height) {
 }
 
 function updateEstimate() {
-  const width = widthInput.valueAsNumber;
-  const height = heightInput.valueAsNumber;
-  for (const node of route) estimatePath(node, width, height);
+  for (const node of route) estimatePath(node, mapWidth, mapHeight);
   const estimates = routeEstimates.get(selectedNode);
   const selectedNumber = route.indexOf(selectedNode) + 1;
   const estimatePathDetail = find("estimate-path");
@@ -415,15 +403,15 @@ function updateButtons() {
   find("zoom-in").disabled = !drawnWidth || zoom >= 7;
   find("zoom-out").disabled = !drawnWidth || zoom <= 1;
   find("zoom-fit").disabled = !drawnWidth;
-  const calibrated = widthInput.valueAsNumber >= 1 && heightInput.valueAsNumber >= 1;
+  const calibrated = mapWidth >= 1 && mapHeight >= 1;
   const eligible = [...comparisons.values()].some(canAutoRoute);
   autoPathButton.disabled = !selectedNode?.parent || !terrainGrid || collisionStatus === "loading" || !eligible || !calibrated;
   removeAutoPathButton.hidden = !selectedNode?.routes?.size;
   if (!selectedNode?.parent) autoPathStatus.textContent = "Select a child node to route from its parent.";
+  else if (!calibrated) autoPathStatus.textContent = "Auto-routing needs SDK dimensions for this map.";
   else if (!terrainGrid) autoPathStatus.textContent = terrainStatus === "loading" ? "Loading terrain…" : "Auto-routing needs terrain data for this map.";
   else if (collisionStatus === "loading") autoPathStatus.textContent = "Loading collision data…";
   else if (!eligible) autoPathStatus.textContent = "Add a ground vehicle with a valid speed to auto-route.";
-  else if (!calibrated) autoPathStatus.textContent = "Enter the map width and height to auto-route.";
   else autoPathStatus.textContent = "Find a route from the parent node for each selected ground vehicle.";
 }
 
@@ -445,8 +433,8 @@ function setLinkRoutes(node, routes) {
 function autoRouteLink() {
   if (autoPathButton.disabled) return;
   const node = selectedNode;
-  const width = widthInput.valueAsNumber;
-  const height = heightInput.valueAsNumber;
+  const width = mapWidth;
+  const height = mapHeight;
   const endpoints = [node.parent, node];
   const canFloat = [...comparisons.values()].some((comparison) => comparison.waterSpeedKmh > 0 && canAutoRoute(comparison));
   const water = Collision.waterGrid(terrainGrid, collisionGrid, canFloat);
@@ -876,16 +864,6 @@ if (sdk?.maps.length && vehicles?.length) {
   addVehicleButton.addEventListener("click", addVehicle);
   autoPathButton.addEventListener("click", autoRouteLink);
   removeAutoPathButton.addEventListener("click", removeAutoRoute);
-  for (const input of [widthInput, heightInput]) {
-    input.addEventListener("input", () => {
-      scales.set(mapSelect.value, [widthInput.value, heightInput.value]);
-      routeEstimates.clear();
-      terrainEdges.clear();
-      updateMapDetail();
-      updateEstimate();
-      updateButtons();
-    });
-  }
   find("draw").addEventListener("click", () => setMode("draw"));
   find("pan").addEventListener("click", () => setMode("pan"));
   find("undo").addEventListener("click", undo);
