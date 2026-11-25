@@ -873,7 +873,6 @@ if (sdk?.maps.length && vehicles?.length) {
   find("zoom-fit").addEventListener("click", fitMap);
   new ResizeObserver(() => centerZoom(zoom)).observe(viewport);
   selectFaction();
-  addVehicle();
   selectMap();
 } else {
   for (const control of document.querySelectorAll("button, input, select")) control.disabled = true;
