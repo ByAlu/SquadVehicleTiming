@@ -10,6 +10,7 @@ const addVehicleButton = find("add-vehicle");
 const autoPathButton = find("auto-path");
 const removeAutoPathButton = find("remove-auto-path");
 const autoPathStatus = find("auto-path-status");
+const showLegTimes = find("show-leg-times");
 const viewport = find("viewport");
 const stage = find("stage");
 const image = find("map-image");
@@ -390,9 +391,10 @@ function updateEstimate() {
     const item = document.createElement("li");
     const parent = node.parent ? `, connected to node ${route.indexOf(node.parent) + 1}` : ", start";
     const selection = node === selectedNode ? ", selected" : "";
-    const elapsed = [...comparisons].map(([vehicleIndex, { vehicle }]) =>
-      `${vehicle.name} (${vehicle.faction}), ${nodeTimeLabel(node, vehicleIndex)} elapsed`);
-    item.textContent = [`Node ${index + 1}${parent}${selection}`, ...elapsed].join(". ");
+    const timing = showLegTimes.checked && node.parent ? "from parent" : "elapsed";
+    const times = [...comparisons].map(([vehicleIndex, { vehicle }]) =>
+      `${vehicle.name} (${vehicle.faction}), ${nodeTimeLabel(node, vehicleIndex)} ${timing}`);
+    item.textContent = [`Node ${index + 1}${parent}${selection}`, ...times].join(". ");
     return item;
   }));
 }
@@ -520,8 +522,14 @@ function nodeTimeLabel(node, vehicleIndex) {
   if (!node.parent) return "0s";
   const estimate = routeEstimates.get(node)?.get(vehicleIndex);
   if (estimate?.collision === "blocked" || estimate?.collision === "water") return "Blocked";
-  const seconds = estimate?.seconds;
-  return Number.isFinite(seconds) ? RouteMath.formatTime(seconds) : "—";
+  let seconds = estimate?.seconds;
+  if (!Number.isFinite(seconds)) return "—";
+  if (showLegTimes.checked && node.parent.parent) {
+    const parentSeconds = routeEstimates.get(node.parent)?.get(vehicleIndex)?.seconds;
+    if (!Number.isFinite(parentSeconds)) return "—";
+    seconds = Math.max(0, seconds - parentSeconds);
+  }
+  return seconds === 0 ? "0s" : RouteMath.formatTime(seconds);
 }
 
 function renderRouteLabels() {
@@ -864,6 +872,7 @@ if (sdk?.maps.length && vehicles?.length) {
   addVehicleButton.addEventListener("click", addVehicle);
   autoPathButton.addEventListener("click", autoRouteLink);
   removeAutoPathButton.addEventListener("click", removeAutoRoute);
+  showLegTimes.addEventListener("change", updateEstimate);
   find("draw").addEventListener("click", () => setMode("draw"));
   find("pan").addEventListener("click", () => setMode("pan"));
   find("undo").addEventListener("click", undo);
