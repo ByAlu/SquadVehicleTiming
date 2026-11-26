@@ -266,6 +266,20 @@ test("Black Coast water data blocks cells the vehicle collision scan marked clea
   assert.equal(AutoPath.find(shore, water, terrain, width, height, { tracked: false, speedKmh: 65, collision }), null);
 });
 
+test("Harju samples the dry tracks and bridge deck above the ocean collider", async (t) => {
+  const collision = await loadMapCollision(t, "Harju");
+  const { columns, rows } = collision.grid;
+  for (const [column, row] of [[584, 402], [585, 403], [579, 394], [609, 399], [616, 395], [622, 392], [645, 381]]) {
+    const point = { x: (column + 0.5) / columns, y: (row + 0.5) / rows };
+    assert.notEqual(Collision.segment(point, point, collision), "unknown", `${column}, ${row}`);
+    assert.equal(Collision.segment(point, point, collision.water), "clear", `${column}, ${row}`);
+    assert.equal(collision.wadingWater.depths[row * columns + column], 0, `${column}, ${row}`);
+  }
+  const river = { x: 620.5 / columns, y: 405.5 / rows };
+  assert.equal(Collision.overlayLabelAt(river.x, river.y, collision), "Deep water");
+  assert.equal(Collision.segment(river, river, collision.water), "blocked");
+});
+
 test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {
   const name = "Gorodok";
   const terrain = require("../maps/Gorodok/terrain.json");

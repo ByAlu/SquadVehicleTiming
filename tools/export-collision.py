@@ -37,8 +37,11 @@ def is_support(component, actor, cache):
         kind = component.get_class().get_name()
         label = actor.get_actor_label() if actor else ""
         mesh = TERRAIN["SDK"]["property_value"](component, "static_mesh")
-        name = f"{label} {mesh.get_name() if mesh else ''}"
-        cache[component] = (kind.startswith("Landscape"), bool(SURFACE_NAMES.search(name)))
+        mesh_name = mesh.get_name() if mesh else ""
+        # Harju's drivable track splines belong to the same actor as the landscape heightfield.
+        track_spline = mesh_name == "Tracks_x3" and isinstance(component, unreal.SplineMeshComponent)
+        roadway = track_spline or bool(SURFACE_NAMES.search(f"{label} {mesh_name}"))
+        cache[component] = (kind.startswith("Landscape"), roadway)
     return cache[component]
 
 
