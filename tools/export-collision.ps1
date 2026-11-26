@@ -2,8 +2,8 @@ param(
     [string]$SdkRoot = 'C:\SqSDK\SquadEditor',
     [Parameter(Mandatory)]
     [string[]]$Map,
-    [ValidateRange(2, 16)]
-    [int]$SpacingMeters = 4,
+    [ValidateRange(1, 16)]
+    [int]$SpacingMeters = 1,
     [switch]$ColliderObjects,
     [switch]$Water
 )

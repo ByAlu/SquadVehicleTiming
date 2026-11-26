@@ -56,10 +56,11 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 ## Vehicle collision data
 
-All 25 maps with a calibrated SDK gameplay layer include a collision grid at roughly 4 m spacing. To regenerate a grid, pass the map name to `-Map` from the repository in PowerShell. For a full refresh, use small batches so the SDK releases memory between runs.
+All 25 maps with a calibrated SDK gameplay layer include a collision grid. The checked-in base grids use roughly 4 m spacing. New exports default to 1 m spacing. Use `-SpacingMeters 4` for smaller files and faster exports.
 
 ```powershell
-.\tools\export-collision.ps1 -Map 'Logar Valley' -SpacingMeters 4
+.\tools\export-collision.ps1 -Map 'Logar Valley'
+.\tools\export-all-collisions.ps1
 ```
 
 The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Both traces ignore layer-specific team staging and main-base protection actors. Physical obstacles inside those zones still count. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified. The grid also stores the support elevation in decimeters for slope-aware routing and timing.
