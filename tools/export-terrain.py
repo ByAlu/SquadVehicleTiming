@@ -42,7 +42,8 @@ def load_map(path, collision_bounds=None):
     if actors:
         partition.load_actors(actors)
     unreal.GameplayStatics.flush_level_streaming(world)
-    unreal.SystemLibrary.execute_console_command(world, "StaticMesh.FinishCompilation")
+    # Collision queries need the finished mesh bodies from the streamed levels.
+    unreal.SystemLibrary.execute_console_command(world, "Editor.AsyncStaticMeshCompilationFinishAll")
     unreal.log(f"Squad terrain: loaded {path} with {len(actors)} partition actors.")
     return world
 

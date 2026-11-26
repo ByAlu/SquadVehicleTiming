@@ -200,6 +200,19 @@ function loadMapCollision(t, name) {
   return Collision.load({ name }, script.window.squadWaterData[name], script.window.squadWadingWaterData[name]);
 }
 
+test("Yehorivka marks the verified barns, house, and walls as obstacles", async (t) => {
+  const collision = await loadMapCollision(t, "Yehorivka");
+  const { columns, rows } = collision.grid;
+  const center = (column, row) => ({ x: (column + 0.5) / columns, y: (row + 0.5) / rows });
+  for (const [column, row] of [[811, 947], [926, 980], [797, 946], [846, 973], [840, 984]]) {
+    const point = center(column, row);
+    assert.equal(Collision.overlayLabelAt(point.x, point.y, collision), "Solid obstacle", `${column}, ${row}`);
+    assert.equal(Collision.segment(point, point, collision), "blocked", `${column}, ${row}`);
+  }
+  const openCell = center(827, 978);
+  assert.equal(Collision.segment(openCell, openCell, collision), "clear");
+});
+
 test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sample", async (t) => {
   const name = "Al Basrah";
   const terrain = require("../maps/Al Basrah/terrain.json");
