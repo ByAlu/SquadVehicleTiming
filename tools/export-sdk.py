@@ -60,6 +60,16 @@ ICON_PRESETS = {
     "bike": ("Bike", 55),
 }
 
+# These table rows lack a linked physics export. Use the matching SDK chassis
+# for wading estimates without replacing the selected vehicle's driving model.
+WADING_CHASSIS = {
+    ("CAF", "CAF_TAPV-M2"): ("CAF", "CAF_TAPV"),
+    ("GFI", "GFI_BTR-80"): ("RGF", "RGF_BTR-80"),
+    ("USMC", "USMC_M1151_M2_Open"): ("USMC", "USMC_M1151_M2"),
+    ("USMC", "USMC_M1151_M240_Open"): ("USMC", "USMC_M1151_M240"),
+    ("USMC", "USMC_M1151_Mk19_Open"): ("USMC", "USMC_M1151_Mk19"),
+}
+
 
 def display_text(value):
     if not value or "(" not in value:
@@ -292,18 +302,44 @@ def driving_profile(variant):
     return profile
 
 
+def wading_profile(variant):
+    wheels = variant.get("wheels", [])
+    if not wheels or variant.get("tracks"):
+        return None
+    radii = [wheel.get("wheel_radius", 0) for wheel in wheels]
+    transmission = variant.get("transmission", {})
+    final_drive = transmission.get("final_drive_ratio", 0)
+    max_rpm = variant.get("engine", {}).get("max_rpm", 0)
+    if not all(type(value) in (int, float) and math.isfinite(value) and value > 0
+               for value in (*radii, final_drive, max_rpm)):
+        return None
+
+    # Water reaches the smallest wheel first on configurations with mixed radii.
+    radius = min(radii) / 100
+    gears = [{"ratio": gear["ratio"] * final_drive, "limitRpm": max_rpm}
+             for gear in transmission.get("forward_gear_ratios", [])
+             if gear.get("ratio", 0) > 0]
+    if not gears:
+        return None
+    speed_limit = 2 * math.pi * radius * max_rpm * 0.06 / min(gear["ratio"] for gear in gears)
+    return {"radiusMeters": radius, "speedLimitKmh": speed_limit, "gears": gears[:2]}
+
+
 def build_vehicle_catalog():
     vehicles = []
+    variants_by_row = {}
     for path in VEHICLE_ROOT.glob("*/*.json"):
         vehicle = json.loads(path.read_text(encoding="utf-8"))
         if path != vehicle_path(vehicle):
             raise ValueError(f"{path} must match the faction and row name in the vehicle record.")
+        variants_by_row[vehicle["faction"], path.stem] = vehicle.pop("sdkPhysics", {}).get("variants", [])
         vehicles.append(vehicle)
     if not vehicles:
         raise RuntimeError("No vehicle JSON files were found.")
     vehicles.sort(key=lambda vehicle: (vehicle["faction"], vehicle["name"].casefold(), vehicle["type"]))
     for vehicle in vehicles:
-        variants = vehicle.pop("sdkPhysics", {}).get("variants", [])
+        row = (vehicle["faction"], vehicle_path(vehicle).stem)
+        variants = variants_by_row[row]
         profiles = [profile for variant in variants if (profile := driving_profile(variant))]
         if profiles:
             vehicle["drivingProfiles"] = profiles
@@ -312,6 +348,12 @@ def build_vehicle_catalog():
             water = water_model(variants[0])
             if water and all(water_model(variant) == water for variant in variants):
                 vehicle["waterMotion"] = water
+        if not profiles and vehicle["type"] not in ("Boat", "Helicopter"):
+            wading_variants = variants or variants_by_row.get(WADING_CHASSIS.get(row), [])
+            if wading_variants:
+                wading = wading_profile(wading_variants[0])
+                if wading and all(wading_profile(variant) == wading for variant in wading_variants[1:]):
+                    vehicle["wadingProfile"] = wading
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"

@@ -1,7 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 const Driving = require("../driving.js");
 const Terrain = require("../terrain.js");
 
@@ -92,4 +95,25 @@ test("wading uses second gear up to tire height and first gear above it", () => 
   assert.equal(Terrain.wadingSpeedLimitKmh(null, wheeled), 14);
   assert.equal(Terrain.wadingSpeedLimitKmh(101, { ...wheeled, name: "CTM131" }), 14);
   assert.equal(Terrain.wadingSpeedLimitKmh(100, { ...wheeled, name: "CTM131" }), tireDeep.speedLimitKmh);
+});
+
+test("all wheeled catalog entries have tire-height and gear data for wading", () => {
+  const catalog = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../vehicles/catalog.js"), "utf8"), catalog);
+  for (const vehicle of catalog.window.squadVehicles) {
+    const { name, type, drivingProfiles, wadingProfile } = vehicle;
+    if (type === "Boat" || type === "Helicopter") {
+      assert.equal(wadingProfile, undefined, name);
+      continue;
+    }
+    const profiles = drivingProfiles?.filter((profile) => !profile.tracked) ?? (wadingProfile ? [wadingProfile] : []);
+    if (!drivingProfiles?.length && type !== "Tank" && !/track/i.test(type)) assert.ok(profiles.length > 0, name);
+    for (const profile of profiles) {
+      const tireHeight = Math.round(profile.radiusMeters * 200);
+      assert.ok(tireHeight > 0, name);
+      assert.equal(Terrain.wadingGear(tireHeight, profile), Math.min(2, profile.gears.length), name);
+      assert.equal(Terrain.wadingGear(tireHeight + 1, profile), 1, name);
+      assert.ok(Terrain.wadingSpeedLimitKmh(tireHeight, profile) >= Terrain.wadingSpeedLimitKmh(tireHeight + 1, profile), name);
+    }
+  }
 });
