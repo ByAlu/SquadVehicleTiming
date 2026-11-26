@@ -4,6 +4,12 @@ const Collision = (() => {
   const elevationsByGrid = new WeakMap();
   const mappedWaterByTerrain = new WeakMap();
   const alignedWaterByCollision = new WeakMap();
+  const overlayTypes = {
+    blocked: { label: "Solid obstacle", color: "#fb6468" },
+    water: { label: "Deep water", color: "#4d9de8" },
+    unknown: { label: "No ground sample", color: "#9795aa" },
+    clear: { label: "Clear ground", color: "transparent" },
+  };
 
   function elevations(data) {
     if (!data?.elevationDmInt16Le) return null;
@@ -97,6 +103,46 @@ const Collision = (() => {
     return alignedWaterByCollision.get(collision);
   }
 
+  function overlayCell(column, row, data, water) {
+    const cell = data.rows[row][column];
+    if (cell === "#") return "blocked";
+    if (water?.rows[row]?.[column] === "#") return "water";
+    return cell === "." ? "clear" : "unknown";
+  }
+
+  function overlayLabelAt(x, y, data, water = data.water) {
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    const { columns, rows } = data.grid;
+    const column = Math.min(columns - 1, Math.floor(x * columns));
+    const row = Math.min(rows - 1, Math.floor(y * rows));
+    return overlayTypes[overlayCell(column, row, data, water)].label;
+  }
+
+  function drawOverlay(canvas, data, water = data.water) {
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    const { columns, rows } = data.grid;
+    canvas.width = columns;
+    canvas.height = rows;
+    const image = context.createImageData(columns, rows);
+    const colors = Object.fromEntries(Object.entries(overlayTypes).map(([type, { color }]) =>
+      [type, Number.parseInt(color.slice(1), 16)]));
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        const type = overlayCell(column, row, data, water);
+        if (type === "clear") continue;
+        const rgb = colors[type];
+        const offset = (row * columns + column) * 4;
+        image.data[offset] = rgb >> 16;
+        image.data[offset + 1] = (rgb >> 8) & 255;
+        image.data[offset + 2] = rgb & 255;
+        image.data[offset + 3] = 255;
+      }
+    }
+    context.putImageData(image, 0, 0);
+    return Object.values(overlayTypes).map(({ label, color }) => [label, color]);
+  }
+
   function segment(a, b, data, water = null) {
     if (!data) return "unknown";
     const { columns, rows } = data.grid;
@@ -157,7 +203,7 @@ const Collision = (() => {
     return status;
   }
 
-  return { load, segment, path, elevations, waterGrid };
+  return { load, segment, path, elevations, waterGrid, drawOverlay, overlayLabelAt };
 })();
 
 if (typeof module !== "undefined") module.exports = Collision;

@@ -21,6 +21,11 @@ const speedOverlayToggle = find("speed-overlay-toggle");
 const terrainKey = find("terrain-key");
 const terrainLegend = find("terrain-legend");
 const terrainOverlayStatus = find("terrain-overlay-status");
+const collisionOverlay = find("collision-overlay");
+const collisionOverlayToggle = find("collision-overlay-toggle");
+const collisionKey = find("collision-key");
+const collisionLegend = find("collision-legend");
+const collisionOverlayStatus = find("collision-overlay-status");
 const mapCursorLabel = find("map-cursor-label");
 const cursor = find("cursor");
 const mapMessage = find("map-message");
@@ -59,6 +64,8 @@ let terrainPointer = null;
 let terrainStatus = "unavailable";
 let collisionGrid = null;
 let collisionStatus = "unavailable";
+let paintedCollision = null;
+let paintedCollisionWater = null;
 let selectedNode = null;
 
 function selectMap() {
@@ -71,11 +78,13 @@ function selectMap() {
   paintedTerrain = null;
   paintedWater = null;
   collisionGrid = null;
+  paintedCollision = null;
+  paintedCollisionWater = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
   collisionStatus = map.sourceLayer ? "loading" : "unavailable";
   drawnWidth = 0;
   drawnHeight = 0;
-  updateTerrainOverlay();
+  updateMapOverlays();
   clearRoute();
   find("map-heading").textContent = map.name;
   viewport.setAttribute("aria-label", `${map.name} route map`);
@@ -107,7 +116,7 @@ function selectMap() {
       if (request !== loadId) return;
       collisionGrid = grid;
       collisionStatus = "ready";
-      updateTerrainOverlay();
+      updateMapOverlays();
       collisionEdges.clear();
       terrainEdges.clear();
       routeEstimates.clear();
@@ -116,7 +125,7 @@ function selectMap() {
     }).catch(() => {
       if (request !== loadId) return;
       collisionStatus = "unavailable";
-      updateMapCursorLabel();
+      updateMapOverlays();
       updateEstimate();
       updateButtons();
     });
@@ -124,7 +133,7 @@ function selectMap() {
       if (request !== loadId) return;
       terrainGrid = grid;
       terrainStatus = "ready";
-      updateTerrainOverlay();
+      updateMapOverlays();
       collisionEdges.clear();
       routeEstimates.clear();
       updateEstimate();
@@ -132,7 +141,7 @@ function selectMap() {
     }).catch(() => {
       if (request !== loadId) return;
       terrainStatus = "unavailable";
-      updateTerrainOverlay();
+      updateMapOverlays();
       updateEstimate();
       updateButtons();
     });
@@ -141,6 +150,24 @@ function selectMap() {
 
 function surfaceName(type) {
   return type.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function renderOverlayLegend(legend, entries) {
+  legend.replaceChildren(...entries.map(([label, color]) => {
+    const item = document.createElement("li");
+    const swatch = document.createElement("span");
+    swatch.className = "terrain-swatch";
+    swatch.setAttribute("aria-hidden", "true");
+    swatch.style.backgroundColor = color;
+    item.append(swatch, label);
+    return item;
+  }));
+}
+
+function updateMapOverlays() {
+  updateTerrainOverlay();
+  updateCollisionOverlay();
+  updateMapCursorLabel();
 }
 
 function updateTerrainOverlay() {
@@ -155,15 +182,7 @@ function updateTerrainOverlay() {
       ? "Loading terrain data…" : "Terrain data unavailable for this map.";
   } else if (active && (paintedTerrain !== terrainGrid || paintedWater !== water)) {
     const surfaces = Terrain.drawSurfaceOverlay(terrainOverlay, terrainGrid, water);
-    terrainLegend.replaceChildren(...(surfaces ?? []).map(([type, color]) => {
-      const item = document.createElement("li");
-      const swatch = document.createElement("span");
-      swatch.className = "terrain-swatch";
-      swatch.setAttribute("aria-hidden", "true");
-      swatch.style.backgroundColor = color;
-      item.append(swatch, surfaceName(type));
-      return item;
-    }));
+    renderOverlayLegend(terrainLegend, (surfaces ?? []).map(([type, color]) => [surfaceName(type), color]));
     terrainOverlayStatus.hidden = Boolean(surfaces?.length);
     if (!surfaces) {
       terrainOverlay.hidden = true;
@@ -174,7 +193,36 @@ function updateTerrainOverlay() {
       paintedWater = water;
     }
   }
-  updateMapCursorLabel();
+}
+
+function updateCollisionOverlay() {
+  const active = collisionOverlayToggle.getAttribute("aria-pressed") === "true";
+  collisionKey.hidden = !active;
+  collisionOverlay.hidden = true;
+  if (!active) return;
+
+  collisionLegend.hidden = true;
+  collisionOverlayStatus.hidden = false;
+  if (!collisionGrid) {
+    collisionOverlayStatus.textContent = collisionStatus === "loading"
+      ? "Loading collision data…" : "Collision data unavailable for this map.";
+    return;
+  }
+
+  const water = Collision.waterGrid(terrainGrid, collisionGrid, true);
+  if (paintedCollision !== collisionGrid || paintedCollisionWater !== water) {
+    const legend = Collision.drawOverlay(collisionOverlay, collisionGrid, water);
+    if (!legend) {
+      collisionOverlayStatus.textContent = "Collision overlay unavailable in this browser.";
+      return;
+    }
+    renderOverlayLegend(collisionLegend, legend);
+    paintedCollision = collisionGrid;
+    paintedCollisionWater = water;
+  }
+  collisionOverlay.hidden = false;
+  collisionLegend.hidden = false;
+  collisionOverlayStatus.hidden = true;
 }
 
 function selectFaction() {
@@ -855,8 +903,9 @@ function tileSpeedLabel({ ground, model, speed, tracked, waterSpeedKmh, wadingPr
 
 function updateMapCursorLabel() {
   const showTerrain = !terrainOverlay.hidden && paintedTerrain;
+  const showCollision = !collisionOverlay.hidden && paintedCollision;
   const showSpeed = speedOverlayToggle.getAttribute("aria-pressed") === "true";
-  if ((!showTerrain && !showSpeed) || !drawnWidth || !drawnHeight) {
+  if ((!showTerrain && !showCollision && !showSpeed) || !drawnWidth || !drawnHeight) {
     mapCursorLabel.hidden = true;
     return;
   }
@@ -873,6 +922,10 @@ function updateMapCursorLabel() {
   if (showTerrain) {
     const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain, paintedWater);
     lines.push(surface ? surfaceName(surface.type) : "No terrain sample");
+  }
+  if (showCollision) {
+    const status = Collision.overlayLabelAt(normalized.x, normalized.y, paintedCollision, paintedCollisionWater);
+    lines.push(`Collision · ${status}`);
   }
   if (showSpeed) {
     if (!comparisons.size) {
@@ -1081,7 +1134,11 @@ if (sdk?.maps.length && vehicles?.length) {
   showLegTimes.addEventListener("change", updateEstimate);
   terrainOverlayToggle.addEventListener("click", () => {
     terrainOverlayToggle.setAttribute("aria-pressed", String(terrainOverlayToggle.getAttribute("aria-pressed") !== "true"));
-    updateTerrainOverlay();
+    updateMapOverlays();
+  });
+  collisionOverlayToggle.addEventListener("click", () => {
+    collisionOverlayToggle.setAttribute("aria-pressed", String(collisionOverlayToggle.getAttribute("aria-pressed") !== "true"));
+    updateMapOverlays();
   });
   speedOverlayToggle.addEventListener("click", () => {
     speedOverlayToggle.setAttribute("aria-pressed", String(speedOverlayToggle.getAttribute("aria-pressed") !== "true"));
