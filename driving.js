@@ -199,8 +199,8 @@ const Driving = (() => {
     if (!pieces.length) return [];
     if (!(speedLimitKmh > 0)) return pieces.map(() => 0);
     const groundFriction = pieces[0].gripFactor;
-    if (pieces.every(({ grade, speedFactor, powerFactor, gripFactor }) =>
-      grade === 0 && speedFactor === 1 && powerFactor === 1 && gripFactor === groundFriction)) {
+    if (pieces.every(({ grade, speedFactor, powerFactor, gripFactor, speedLimitKmh: pieceLimit = Infinity }) =>
+      grade === 0 && speedFactor === 1 && powerFactor === 1 && gripFactor === groundFriction && pieceLimit >= speedLimitKmh)) {
       const flatModel = groundFriction === 1 ? model : prepare(model.profile, groundFriction);
       return travelLegSeconds(pieces.map((piece) => piece.distance), flatModel, speedLimitKmh);
     }
@@ -208,7 +208,7 @@ const Driving = (() => {
     const { profile: { slope }, samples, shifts, brakeAcceleration, gripAcceleration } = model;
     const maxSpeed = samples.at(-1).speed;
     const userLimit = speedLimitKmh / 3.6;
-    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor }) => {
+    const segments = pieces.map(({ distance, grade, speedFactor, powerFactor, gripFactor, speedLimitKmh: pieceLimit = Infinity }) => {
       const incline = grade / Math.hypot(1, grade);
       const downhill = slope && grade < 0;
       const grip = gripAcceleration * gripFactor;
@@ -216,7 +216,7 @@ const Driving = (() => {
       const gravityAssist = downhill ? -gravity * incline : 0;
       const accelerationAtSpeed = (speed) => Math.min(grip, accelerationFromSpeed(samples, speed) * power)
         + gravityAssist + slopeAcceleration(slope, incline, speed);
-      const target = Math.min(userLimit, maxSpeed * speedFactor);
+      const target = Math.min(userLimit, pieceLimit / 3.6, maxSpeed * speedFactor);
       const cap = downhill ? downhillSpeedLimit(target, accelerationAtSpeed) : target;
       const braking = Math.min(grip, brakeAcceleration * Math.max(0.35, Math.min(1.4, 1 + 2.5 * grade)));
       return { distance, cap, incline, accelerationAtSpeed, braking };

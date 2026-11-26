@@ -53,6 +53,7 @@ const AutoPath = (() => {
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
+    const wadingSpeed = terrainMath.wadingSpeedKmh / 3.6;
     const fastestSpeed = Math.max(waterSpeed, speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1));
     const diagonal = Math.hypot(dxMeters, dyMeters);
     const steps = directions.map(([dx, dy]) => ({ dx, dy, distance: Math.hypot(dx * dxMeters, dy * dyMeters) }));
@@ -70,6 +71,13 @@ const AutoPath = (() => {
       (collision && collisionMath.segment(a, b, collision, waterSupport) !== "clear");
     const terrainAt = (x, y) => terrain.rows[terrainRows[y]]?.[terrainColumns[x]];
     const waterAt = (x, y) => sameWaterGrid && water.rows[y]?.[x] === "#";
+
+    function speedAt(x, y, surfaceIndex, pace) {
+      if (waterSpeed && waterAt(x, y)) return waterSpeed;
+      const landSpeed = speed * pace * (cellPace[surfaceIndex] ?? 1);
+      return collision?.wadingWater?.rows[y]?.[x] === "#" || terrain.surfaces[surfaceIndex]?.type === "Water"
+        ? Math.min(landSpeed, wadingSpeed) : landSpeed;
+    }
 
     function passable(x, y) {
       if (waterAt(x, y)) return waterSpeed > 0 && (!collision || collision.rows[y]?.[x] !== "#");
@@ -175,8 +183,8 @@ const AutoPath = (() => {
         const next = terrainAt(nx, ny);
         const grade = gradeBetween(x, y, nx, ny, distance);
         const pace = terrainMath.paceForGrade(grade, 1);
-        const fromSpeed = waterSpeed && waterAt(x, y) ? waterSpeed : speed * pace * (cellPace[cell?.[3]] ?? 1);
-        const toSpeed = waterSpeed && waterAt(nx, ny) ? waterSpeed : speed * pace * (cellPace[next?.[3]] ?? 1);
+        const fromSpeed = speedAt(x, y, cell?.[3], pace);
+        const toSpeed = speedAt(nx, ny, next?.[3], pace);
         const cost = costs[id] + distance * Math.hypot(1, grade) * (1 / fromSpeed + 1 / toSpeed) / 2;
         if (cost >= costs[nextId]) continue;
         costs[nextId] = cost;

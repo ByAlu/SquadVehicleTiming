@@ -16,7 +16,7 @@ const Collision = (() => {
     return heights;
   }
 
-  function load(map, water) {
+  function load(map, water, wadingWater) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = `maps/${encodeURIComponent(map.name)}/collision.js`;
@@ -31,6 +31,7 @@ const Collision = (() => {
           }
           elevations(data);
           if (water) data.water = decodeWater(data.grid, water);
+          if (wadingWater?.length > 2) data.wadingWater = decodeWater(data.grid, wadingWater);
           resolve(data);
         } catch (error) {
           reject(error);

@@ -108,6 +108,24 @@ test("a depth scan with no deep water takes precedence over terrain Water", asyn
   })?.direct, true);
 });
 
+test("auto-routing can detour around a slow but passable ford", () => {
+  const grid = { columns: 5, rows: 3 };
+  const land = [0, 0, 0, 0];
+  const terrain = { grid, rows: Array.from({ length: 3 }, () => Array(5).fill(land)), surfaces: [{ type: "Asphalt" }] };
+  const collision = { grid, rows: [".....", ".....", "....."], wadingWater: { grid, rows: [".....", ".###.", "....."] } };
+  const start = { x: 0.1, y: 0.5 };
+  const end = { x: 0.9, y: 0.5 };
+  const options = { tracked: false, speedKmh: 65, collision };
+  const result = AutoPath.find(start, end, terrain, 50, 30, options);
+
+  assert.equal(result?.direct, true);
+  assert.ok(result.via.some(({ y }) => y !== start.y));
+  const crossing = Terrain.sampleRoute([start, end], 50, 30, terrain, null, null, collision.wadingWater);
+  const conditions = Terrain.drivingConditions(crossing.pieces, false);
+  assert.ok(conditions.some((piece) => piece.speedLimitKmh === 14));
+  assert.ok(conditions.some((piece) => piece.speedLimitKmh === Infinity));
+});
+
 test("amphibious routing crosses water without ground support and still avoids mapped blockers", () => {
   const grid = { columns: 5, rows: 3 };
   const cell = [0, 0, 0, 0];
@@ -144,6 +162,7 @@ test("amphibious auto-routing rejects a steep bank above unsampled water", () =>
 function loadMapCollision(t, name) {
   const script = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../water-data.js"), "utf8"), script);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../wading-water-data.js"), "utf8"), script);
   const directory = path.join(__dirname, "../maps", name);
   global.document = {
     createElement: () => ({ remove() {} }),
@@ -156,8 +175,25 @@ function loadMapCollision(t, name) {
     },
   };
   t.after(() => { delete global.document; });
-  return Collision.load({ name }, script.window.squadWaterData[name]);
+  return Collision.load({ name }, script.window.squadWaterData[name], script.window.squadWadingWaterData[name]);
 }
+
+test("the Al Basrah ford uses the wading cap over a Dirt terrain sample", async (t) => {
+  const name = "Al Basrah";
+  const terrain = require("../maps/Al Basrah/terrain.json");
+  const collision = await loadMapCollision(t, name);
+  const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
+  const start = { x: 559.25 / columns, y: 732.5 / rows };
+  const end = { x: 559.75 / columns, y: start.y };
+  const water = Collision.waterGrid(terrain, collision);
+
+  assert.equal(Collision.segment(start, end, collision), "clear");
+  assert.equal(Collision.segment(start, end, water), "clear");
+  const crossing = Terrain.sampleRoute([start, end], columns * columnSpacingMeters, rows * rowSpacingMeters,
+    terrain, null, water, collision.wadingWater);
+  assert.equal(crossing.pieces[0].surface.type, "Dirt");
+  assert.equal(Terrain.drivingConditions(crossing.pieces, false)[0].speedLimitKmh, 14);
+});
 
 test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {
   const name = "Black Coast";

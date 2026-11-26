@@ -2,6 +2,7 @@
 
 const Terrain = (() => {
   const maxGrade = 0.45;
+  const wadingSpeedKmh = 14;
   // Estimated pace as a fraction of the firm-road speed, wheeled then tracked.
   const surfacePace = {
     Dirt: [0.84, 0.93], DirtGravel: [0.88, 0.95], Gravel: [0.9, 0.95],
@@ -107,9 +108,16 @@ const Terrain = (() => {
       uy * axis(at(column, row - 1), at(column, row + 1), height / rows);
   }
 
-  function sampleRoute(points, width, height, terrain, ground = null, water = null) {
+  function waterAt(x, y, water) {
+    if (!water) return false;
+    const { columns, rows } = water.grid;
+    return water.rows[Math.min(rows - 1, Math.floor(y * rows))]?.[
+      Math.min(columns - 1, Math.floor(x * columns))] === "#";
+  }
+
+  function sampleRoute(points, width, height, terrain, ground = null, water = null, wadingWater = null) {
     const { columns, rows } = terrain.grid;
-    const sampleGrid = ground?.grid ?? water?.grid ?? terrain.grid;
+    const sampleGrid = ground?.grid ?? wadingWater?.grid ?? water?.grid ?? terrain.grid;
     const sampleSpacing = Math.min(width / columns, height / rows);
     const pieces = [];
     let sampledMeters = 0;
@@ -132,8 +140,7 @@ const Terrain = (() => {
         const fraction = (part + 0.5) / count;
         const x = start.x + dx * fraction;
         const y = start.y + dy * fraction;
-        if (water && water.rows[Math.min(water.grid.rows - 1, Math.floor(y * water.grid.rows))]?.[
-          Math.min(water.grid.columns - 1, Math.floor(x * water.grid.columns))] === "#") {
+        if (waterAt(x, y, water)) {
           sampledMeters += horizontal;
           classifiedMeters += horizontal;
           waterMeters += horizontal;
@@ -144,8 +151,9 @@ const Terrain = (() => {
         const measuredGrade = ground ? groundGrade(x, y, ux, uy, width, height, ground) : null;
         let grade = 0;
         let surface = null;
+        const wading = waterAt(x, y, wadingWater) || terrain.surfaces[cell?.[3]]?.type === "Water";
+        if (cell || measuredGrade !== null || wading) sampledMeters += horizontal;
         if (cell) {
-          sampledMeters += horizontal;
           surface = terrain.surfaces[cell[3]];
           if (isClassified(surface)) classifiedMeters += horizontal;
           if (measuredGrade !== null) {
@@ -161,11 +169,10 @@ const Terrain = (() => {
             }
           }
         } else if (measuredGrade !== null) {
-          sampledMeters += horizontal;
           grade = measuredGrade;
         }
         grade = Math.max(-maxGrade, Math.min(maxGrade, grade));
-        pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface });
+        pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface, wading });
       }
     }
     return { pieces, sampledMeters, classifiedMeters, waterMeters };
@@ -184,16 +191,17 @@ const Terrain = (() => {
   }
 
   function drivingConditions(pieces, tracked) {
-    return pieces.map(({ distance, grade, surface, water }) => {
+    return pieces.map(({ distance, grade, surface, water, wading }) => {
       const pace = paceForSurface(surface, tracked);
       const friction = surface?.type !== "Water" && Number.isFinite(surface?.friction) && surface.friction > 0
         ? surface.friction
         : 1;
-      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction, water };
+      const speedLimitKmh = wading ? wadingSpeedKmh : Infinity;
+      return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction, water, speedLimitKmh };
     });
   }
 
-  return { maxGrade, load, drawSurfaceOverlay, surfaceAt, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
+  return { maxGrade, wadingSpeedKmh, load, drawSurfaceOverlay, surfaceAt, waterAt, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 
 if (typeof module !== "undefined") module.exports = Terrain;

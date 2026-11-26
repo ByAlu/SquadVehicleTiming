@@ -63,3 +63,12 @@ test("water cruising speed balances the SDK drag sample against thrust", () => {
     forwardDragCoefficient: 0.450077, massKg: 29000 };
   assert.ok(Math.abs(Driving.waterCruiseSpeedKmh(aav) - 7.2) < 1e-5);
 });
+
+test("the driving model respects the wading speed cap on flat ground", () => {
+  const model = Driving.prepare(profile);
+  const piece = { distance: 200, grade: 0, surface: null };
+  const dry = Terrain.drivingConditions([piece], false);
+  const wet = Terrain.drivingConditions([{ ...piece, wading: true }], false);
+  assert.ok(Driving.travelTerrainSeconds(wet, model) > piece.distance / (14 / 3.6));
+  assert.ok(Driving.travelTerrainSeconds(wet, model) > Driving.travelTerrainSeconds(dry, model));
+});
