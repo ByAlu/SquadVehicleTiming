@@ -64,7 +64,9 @@ All 25 maps with a calibrated SDK gameplay layer include a collision grid at rou
 
 The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Both traces ignore layer-specific team staging and main-base protection actors. Physical obstacles inside those zones still count. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified. The grid also stores the support elevation in decimeters for slope-aware routing and timing.
 
-The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
+The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a static grid with one support height per cell. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
+
+Harju's bridge and approaches include a 1 m detail grid. The collision overlay and vehicle routing use these finer samples for the deck, handrails, and water around the crossing.
 
 The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Non-amphibious ground routes avoid water at least 1.5 m deep and water where the scan found no support. They can cross shallower water when the collision grid shows clear ground. When a depth scan is unavailable, the planner uses the terrain scan's Water classification as a fallback. Manual links through blocked water hide the route line and ETA.
 

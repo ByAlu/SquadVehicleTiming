@@ -30,6 +30,8 @@ WATER_OUTPUT = ROOT / "water-data.js"
 WATER_ASSIGNMENT = "window.squadWaterData = "
 WADING_OUTPUT = ROOT / "wading-water-data.js"
 WADING_ASSIGNMENT = "window.squadWadingWaterData = "
+# Harju's bridge and both approaches, in meters from the minimap's upper left.
+DETAIL_BOUNDS_METERS = {"Harju": (2392, 1528, 2540, 1652)}
 
 
 def is_support(component, actor, cache):
@@ -181,6 +183,41 @@ def export_water(entry, bounds):
     unreal.log(f"Squad collision: {name} has {sum(deep)} deep water cells and {count} sampled water depths.")
 
 
+def sample_grid(world, x_min, y_min, columns, row_count, dx, dy, cache, ignored_actors):
+    rows = []
+    heights = array("h")
+    for row in range(row_count):
+        y = y_min + (row + 0.5) * dy
+        cells = []
+        for column in range(columns):
+            status, height = check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache, ignored_actors)
+            cells.append(status)
+            heights.append(height)
+        rows.append("".join(cells))
+    if sys.byteorder != "little":
+        heights.byteswap()
+    return {"rows": rows, "elevationDmInt16Le": b64encode(heights.tobytes()).decode("ascii")}
+
+
+def export_detail(world, metadata, x_min, y_min, dx, dy, cache, ignored_actors):
+    left, top, right, bottom = DETAIL_BOUNDS_METERS[metadata["map"]]
+    column, row = math.floor(left * 100 / dx), math.floor(top * 100 / dy)
+    scale = math.ceil(max(dx, dy) / 100)
+    columns = (math.ceil(right * 100 / dx) - column) * scale
+    rows = (math.ceil(bottom * 100 / dy) - row) * scale
+    x, y = x_min + column * dx, y_min + row * dy
+    bounds = unreal.Box(unreal.Vector(x, y, -250000),
+                        unreal.Vector(x + columns * dx / scale, y + rows * dy / scale, 250000))
+    detail = sample_grid(world, x, y, columns, rows, dx / scale, dy / scale, cache, ignored_actors)
+    detail["map"] = metadata["map"]
+    deep = scan_water(detail, columns, rows, bounds, DEEP_WATER_CM, True)
+    wading = scan_water(detail, columns, rows, bounds, WADING_WATER_CM, False, record_depth=True)
+    del detail["map"]
+    detail.update(column=column, row=row, scale=scale, columns=columns,
+                  waterSpans=water_spans(deep), wadingDepthCm=b64encode(wading).decode("ascii"))
+    return detail
+
+
 def export_map(entry, spacing, collider_objects=False, water=False):
     layer_path = entry.get("sourceLayer")
     if not layer_path:
@@ -206,29 +243,20 @@ def export_map(entry, spacing, collider_objects=False, water=False):
         COLLIDERS["export_colliders"](world_path, entry["name"], (x_min, y_min, x_max, y_max),
                                       ROOT / "maps" / entry["name"] / "colliders.ndjson.gz")
         return
-    rows = []
-    heights = array("h")
     cache = {}
     ignored_actors = layer_zone_actors()
     unreal.log(f"Squad collision: {entry['name']} ignores {len(ignored_actors)} layer-specific staging and protection actors.")
-    for row in range(row_count):
-        y = y_min + (row + 0.5) * dy
-        cells = []
-        for column in range(columns):
-            status, height = check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache, ignored_actors)
-            cells.append(status)
-            heights.append(height)
-        rows.append("".join(cells))
+    samples = sample_grid(world, x_min, y_min, columns, row_count, dx, dy, cache, ignored_actors)
+    rows = samples["rows"]
     blocked = sum(row.count("#") for row in rows)
     unknown = sum(row.count("?") for row in rows)
     if unknown == columns * row_count:
         raise RuntimeError(f"No support surfaces were found in {world_path}.")
-    if sys.byteorder != "little":
-        heights.byteswap()
     metadata = {"schemaVersion": 1, "map": entry["name"], "sourceWorld": world_path, "profile": PROFILE,
                 "grid": {"columns": columns, "rows": row_count, "columnSpacingMeters": dx / 100,
-                         "rowSpacingMeters": dy / 100}, "rows": rows,
-                "elevationDmInt16Le": b64encode(heights.tobytes()).decode("ascii")}
+                         "rowSpacingMeters": dy / 100}, **samples}
+    if entry["name"] in DETAIL_BOUNDS_METERS and max(dx, dy) > 100:
+        metadata["detail"] = export_detail(world, metadata, x_min, y_min, dx, dy, cache, ignored_actors)
     output = ROOT / "maps" / entry["name"] / "collision.js"
     with NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=output.parent, delete=False) as stream:
         temporary = Path(stream.name)

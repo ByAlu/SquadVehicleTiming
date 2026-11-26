@@ -50,6 +50,8 @@ const AutoPath = (() => {
     const terrainColumns = Int32Array.from({ length: columns }, (_, x) => Math.floor((x + 0.5) * terrain.grid.columns / columns));
     const terrainRows = Int32Array.from({ length: rows }, (_, y) => Math.floor((y + 0.5) * terrain.grid.rows / rows));
     const heights = collisionMath.elevations(collision);
+    const baseGround = collision?.baseGround;
+    const detailBounds = collision?.detailBounds;
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
@@ -88,6 +90,20 @@ const AutoPath = (() => {
       const fromWater = waterSpeed > 0 && waterAt(x, y);
       const toWater = waterSpeed > 0 && waterAt(nx, ny);
       if (fromWater && toWater) return 0;
+      if (baseGround && !collisionMath.inDetail(x, y, detailBounds) && !collisionMath.inDetail(nx, ny, detailBounds)) {
+        const base = baseGround.grid;
+        const fromColumn = Math.floor(x * base.columns / columns);
+        const fromRow = Math.floor(y * base.rows / rows);
+        const toColumn = Math.floor(nx * base.columns / columns);
+        const toRow = Math.floor(ny * base.rows / rows);
+        const from = baseGround.heights[fromRow * base.columns + fromColumn];
+        const to = baseGround.heights[toRow * base.columns + toColumn];
+        if (from !== -32768 && to !== -32768) {
+          const baseDistance = Math.hypot((toColumn - fromColumn) * width / base.columns,
+            (toRow - fromRow) * height / base.rows);
+          return baseDistance ? (to - from) / (10 * baseDistance) : 0;
+        }
+      }
       if (heights) {
         const from = heights[y * columns + x];
         const to = heights[ny * columns + nx];
@@ -153,18 +169,18 @@ const AutoPath = (() => {
     const direct = !unsafe(start, end) && directPassable();
     const directResult = direct ? { via: [], direct: true } : null;
     if (startId === endId || unsafe(start, center(startX, startY)) || unsafe(center(endX, endY), end)) return directResult;
-    const costs = new Float64Array(rows * columns).fill(Infinity);
-    const previous = new Int32Array(costs.length).fill(-1);
+    // A cost of zero marks an unreached cell. The start is visited before any neighbor is relaxed.
+    const costs = new Float64Array(rows * columns);
+    const previous = new Int32Array(costs.length);
     const visited = new Uint8Array(costs.length);
     const queue = new MinQueue();
-    costs[startId] = 0;
     queue.push({ id: startId, cost: lowerBound(startX, startY) });
 
     while (queue.entries.length) {
       const { id } = queue.pop();
       if (visited[id]) continue;
       if (id === endId) {
-        const via = pathPoints(previous, endId, columns, rows, start, end);
+        const via = pathPoints(previous, startId, endId, columns, rows, start, end);
         const points = [start, ...via, end];
         if ((!waterSpeed && water && collisionMath.path(points, water) === "blocked") ||
             (collision && collisionMath.path(points, collision, waterSupport) !== "clear")) return directResult;
@@ -186,7 +202,7 @@ const AutoPath = (() => {
         const fromSpeed = speedAt(x, y, cell?.[3], pace);
         const toSpeed = speedAt(nx, ny, next?.[3], pace);
         const cost = costs[id] + distance * Math.hypot(1, grade) * (1 / fromSpeed + 1 / toSpeed) / 2;
-        if (cost >= costs[nextId]) continue;
+        if (costs[nextId] && cost >= costs[nextId]) continue;
         costs[nextId] = cost;
         previous[nextId] = id;
         queue.push({ id: nextId, cost: cost + lowerBound(nx, ny) });
@@ -195,9 +211,10 @@ const AutoPath = (() => {
     return directResult;
   }
 
-  function pathPoints(previous, endId, columns, rows, start, end) {
+  function pathPoints(previous, startId, endId, columns, rows, start, end) {
     const cells = [];
-    for (let id = endId; id >= 0; id = previous[id]) cells.push(id);
+    for (let id = endId; id !== startId; id = previous[id]) cells.push(id);
+    cells.push(startId);
     cells.reverse();
     // Combine consecutive steps in the same direction without cutting corners.
     return cells.filter((id, index) => index === 0 || index === cells.length - 1 ||

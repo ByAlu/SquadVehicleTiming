@@ -96,6 +96,10 @@ const Terrain = (() => {
     const column = Math.min(columns - 1, Math.floor(x * columns));
     const row = Math.min(rows - 1, Math.floor(y * rows));
     const at = (cx, cy) => cx >= 0 && cx < columns && cy >= 0 && cy < rows ? ground.heights[cy * columns + cx] : -32768;
+    const bounds = ground.detailBounds;
+    if (bounds && (column < bounds.left || column >= bounds.right || row < bounds.top || row >= bounds.bottom)) {
+      return groundGrade(x, y, ux, uy, width, height, ground.baseGround);
+    }
     const center = at(column, row);
     if (center === -32768) return null;
     const axis = (before, after, spacing) => {

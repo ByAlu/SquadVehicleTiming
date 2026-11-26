@@ -385,7 +385,8 @@ function pathCollision(path, index, amphibious) {
 
 function sampleTerrain(points, width, height) {
   const heights = Collision.elevations(collisionGrid);
-  const ground = heights ? { grid: collisionGrid.grid, heights } : null;
+  const ground = heights ? { grid: collisionGrid.grid, heights,
+    baseGround: collisionGrid.baseGround, detailBounds: collisionGrid.detailBounds } : null;
   const water = Collision.waterGrid(terrainGrid, collisionGrid, true);
   return Terrain.sampleRoute(points, width, height, terrainGrid, ground, water, collisionGrid?.wadingWater);
 }

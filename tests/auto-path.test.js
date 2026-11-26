@@ -269,15 +269,43 @@ test("Black Coast water data blocks cells the vehicle collision scan marked clea
 test("Harju samples the dry tracks and bridge deck above the ocean collider", async (t) => {
   const collision = await loadMapCollision(t, "Harju");
   const { columns, rows } = collision.grid;
-  for (const [column, row] of [[584, 402], [585, 403], [579, 394], [609, 399], [616, 395], [622, 392], [645, 381]]) {
+  for (const [column, row] of [[2338, 1610], [2342, 1614], [2318, 1578], [2438, 1598],
+    [2466, 1582], [2490, 1570], [2582, 1526]]) {
     const point = { x: (column + 0.5) / columns, y: (row + 0.5) / rows };
     assert.notEqual(Collision.segment(point, point, collision), "unknown", `${column}, ${row}`);
     assert.equal(Collision.segment(point, point, collision.water), "clear", `${column}, ${row}`);
     assert.equal(collision.wadingWater.depths[row * columns + column], 0, `${column}, ${row}`);
   }
-  const river = { x: 620.5 / columns, y: 405.5 / rows };
+  const river = { x: 2482.5 / columns, y: 1622.5 / rows };
   assert.equal(Collision.overlayLabelAt(river.x, river.y, collision), "Deep water");
   assert.equal(Collision.segment(river, river, collision.water), "blocked");
+});
+
+test("Harju routes across the 1 m bridge deck while retaining handrail collisions", async (t) => {
+  const collision = await loadMapCollision(t, "Harju");
+  const terrain = require("../maps/Harju/terrain.json");
+  const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
+  assert.equal(columnSpacingMeters, 1);
+  assert.equal(rowSpacingMeters, 1);
+  const center = (column, row) => ({ x: (column + 0.5) / columns, y: (row + 0.5) / rows });
+  const deck = center(2466, 1582);
+  const rail = center(2466, 1578);
+  assert.equal(Collision.overlayLabelAt(deck.x, deck.y, collision), "Clear ground");
+  assert.equal(Collision.overlayLabelAt(rail.x, rail.y, collision), "Solid obstacle");
+  assert.equal(Collision.segment(deck, rail, collision), "blocked");
+
+  const start = center(2390, 1600);
+  const end = center(2546, 1550);
+  const route = AutoPath.find(start, end, terrain, columns * columnSpacingMeters, rows * rowSpacingMeters,
+    { tracked: false, speedKmh: 60, collision });
+  assert.ok(route?.via.length);
+  assert.equal(Collision.path([start, ...route.via, end], collision), "clear");
+  assert.equal(Collision.path([start, ...route.via, end], collision.water), "clear");
+  assert.ok(route.via.some(({ x, y }) => Math.hypot((x - deck.x) * columns, (y - deck.y) * rows) < 4));
+
+  const straight = [center(2430, 1597), center(2500, 1568)];
+  assert.equal(Collision.path(straight, collision), "clear");
+  assert.equal(Collision.path(straight, collision.water), "clear");
 });
 
 test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {

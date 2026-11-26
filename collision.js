@@ -38,7 +38,7 @@ const Collision = (() => {
           elevations(data);
           if (water) data.water = decodeWater(data.grid, water);
           if (wadingWater?.length > 2) data.wadingWater = await decodeWadingWater(data.grid, wadingWater);
-          resolve(data);
+          resolve(data.detail ? refineGrid(data) : data);
         } catch (error) {
           reject(error);
         }
@@ -74,6 +74,73 @@ const Collision = (() => {
     const depths = new Uint8Array(await new Response(stream).arrayBuffer());
     if (depths.length !== columns * rows) throw new Error("Invalid wading depths.");
     return { grid, depths };
+  }
+
+  function refineGrid(data) {
+    const { column, row, scale, columns, rows, waterSpans, wadingDepthCm } = data.detail;
+    const base = data.grid;
+    if (![column, row, scale, columns].every(Number.isInteger) || scale < 2 || column < 0 || row < 0 ||
+        columns <= 0 || !Array.isArray(rows) || !rows.length || columns % scale || rows.length % scale ||
+        column + columns / scale > base.columns || row + rows.length / scale > base.rows ||
+        !rows.every((line) => typeof line === "string" && line.length === columns && /^[.#?]+$/.test(line))) {
+      throw new Error("Invalid collision detail grid.");
+    }
+    const patch = { columns, rows: rows.length };
+    const grid = { columns: base.columns * scale, rows: base.rows * scale,
+      columnSpacingMeters: base.columnSpacingMeters / scale, rowSpacingMeters: base.rowSpacingMeters / scale };
+    const left = column * scale;
+    const top = row * scale;
+
+    function expandRows(source, detail) {
+      return source.flatMap((line, coarseRow) => {
+        const expanded = line.replace(/./g, (cell) => cell.repeat(scale));
+        return Array.from({ length: scale }, (_, subrow) => {
+          const fineRow = detail[coarseRow * scale + subrow - top];
+          return fineRow === undefined ? expanded : expanded.slice(0, left) + fineRow + expanded.slice(left + columns);
+        });
+      });
+    }
+
+    function expandSamples(source, detail) {
+      if (detail.length !== columns * patch.rows) throw new Error("Invalid collision detail samples.");
+      const expanded = new source.constructor(grid.columns * grid.rows);
+      for (let y = 0; y < base.rows; y++) {
+        const offset = y * scale * grid.columns;
+        for (let x = 0; x < base.columns; x++) {
+          expanded.fill(source[y * base.columns + x], offset + x * scale, offset + (x + 1) * scale);
+        }
+        for (let subrow = 1; subrow < scale; subrow++) {
+          expanded.copyWithin(offset + subrow * grid.columns, offset, offset + grid.columns);
+        }
+      }
+      for (let y = 0; y < patch.rows; y++) {
+        expanded.set(detail.subarray(y * columns, (y + 1) * columns), (top + y) * grid.columns + left);
+      }
+      return expanded;
+    }
+
+    const baseGround = { grid: base, heights: elevations(data) };
+    const detailBounds = { left, top, right: left + columns, bottom: top + patch.rows };
+    const refined = { ...data, grid, baseGround, detailBounds, rows: expandRows(data.rows, rows) };
+    const detailHeights = elevations({ grid: patch, elevationDmInt16Le: data.detail.elevationDmInt16Le });
+    elevationsByGrid.set(refined, expandSamples(baseGround.heights, detailHeights));
+    const water = decodeWater(patch, [columns, patch.rows, ...waterSpans]);
+    if (data.water) refined.water = { grid, rows: expandRows(data.water.rows, water.rows) };
+    if (data.wadingWater) {
+      const detailDepths = Uint8Array.from(atob(wadingDepthCm), (byte) => byte.charCodeAt(0));
+      if (data.wadingWater.depths) {
+        refined.wadingWater = { grid, depths: expandSamples(data.wadingWater.depths, detailDepths) };
+      } else {
+        const wet = rows.map((_, y) => Array.from(detailDepths.subarray(y * columns, (y + 1) * columns),
+          (depth) => depth ? "#" : ".").join(""));
+        refined.wadingWater = { grid, rows: expandRows(data.wadingWater.rows, wet) };
+      }
+    }
+    return refined;
+  }
+
+  function inDetail(column, row, bounds) {
+    return column >= bounds.left && column < bounds.right && row >= bounds.top && row < bounds.bottom;
   }
 
   function waterGrid(terrain, collision, alignToCollision = false) {
@@ -203,7 +270,7 @@ const Collision = (() => {
     return status;
   }
 
-  return { load, segment, path, elevations, waterGrid, drawOverlay, overlayLabelAt };
+  return { load, segment, path, elevations, waterGrid, drawOverlay, overlayLabelAt, inDetail };
 })();
 
 if (typeof module !== "undefined") module.exports = Collision;
