@@ -20,7 +20,7 @@ const Collision = (() => {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = `maps/${encodeURIComponent(map.name)}/collision.js`;
-      script.onload = () => {
+      script.onload = async () => {
         script.remove();
         const data = script.collisionData;
         try {
@@ -31,7 +31,7 @@ const Collision = (() => {
           }
           elevations(data);
           if (water) data.water = decodeWater(data.grid, water);
-          if (wadingWater?.length > 2) data.wadingWater = decodeWater(data.grid, wadingWater);
+          if (wadingWater?.length > 2) data.wadingWater = await decodeWadingWater(data.grid, wadingWater);
           resolve(data);
         } catch (error) {
           reject(error);
@@ -56,6 +56,18 @@ const Collision = (() => {
     const lines = Array.from({ length: rows }, (_, row) =>
       String.fromCharCode(...cells.subarray(row * columns, (row + 1) * columns)));
     return { grid, rows: lines };
+  }
+
+  async function decodeWadingWater(grid, data) {
+    const [columns, rows, payload] = data;
+    if (columns !== grid.columns || rows !== grid.rows) return null;
+    if (typeof payload !== "string") return decodeWater(grid, data);
+    if (!payload) return null;
+    const packed = Uint8Array.from(atob(payload), (byte) => byte.charCodeAt(0));
+    const stream = new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"));
+    const depths = new Uint8Array(await new Response(stream).arrayBuffer());
+    if (depths.length !== columns * rows) throw new Error("Invalid wading depths.");
+    return { grid, depths };
   }
 
   function waterGrid(terrain, collision, alignToCollision = false) {

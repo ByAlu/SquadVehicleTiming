@@ -387,7 +387,7 @@ function estimatePath(node, width, height) {
     let seconds = null;
     if (distance > 0 && collision !== "blocked" && collision !== "water" && (model || speed >= 0.1)) {
       if (coverage.sampledMeters) {
-        seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked), waterSpeedKmh);
+        seconds = timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked, model?.profile), waterSpeedKmh);
       } else {
         seconds = model ? Driving.travelSeconds(distance, model) : RouteMath.travelSeconds(distance, speed);
       }
@@ -541,10 +541,10 @@ function autoRouteLink() {
     const { tracked, model, speed, waterSpeedKmh } = comparison;
     const speedKmh = model ? model.samples.at(-1).speed * 3.6 : speed;
     // The fixed wading cap changes route costs relative to each vehicle's top speed.
-    const key = hasWading ? `${tracked}:${speedKmh}:${waterSpeedKmh}` : `${tracked}:${waterSpeedKmh / speedKmh}`;
+    const key = hasWading ? (model?.profile ?? `${tracked}:${speedKmh}:${waterSpeedKmh}`) : `${tracked}:${waterSpeedKmh / speedKmh}`;
     if (!searches.has(key)) {
       const result = AutoPath.find(node.parent, node, terrainGrid, width, height, {
-        tracked, speedKmh, waterSpeedKmh, collision: collisionGrid,
+        tracked, speedKmh, waterSpeedKmh, collision: collisionGrid, profile: model?.profile,
       });
       const straight = result?.direct && result.via.length ? sampleTerrain(edgePoints(node), width, height).pieces : null;
       const detour = straight ? sampleTerrain(edgePoints(node, result.via), width, height).pieces : null;
@@ -557,7 +557,8 @@ function autoRouteLink() {
     }
     let via = result.via;
     if (straight) {
-      const travelTime = (pieces) => timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked), waterSpeedKmh);
+      const travelTime = (pieces) =>
+        timeForConditions(model, speed, Terrain.drivingConditions(pieces, tracked, model?.profile), waterSpeedKmh);
       if (travelTime(straight) <= travelTime(detour)) via = [];
     }
     routed++;
@@ -832,17 +833,22 @@ function inside({ x, y }) {
   return x >= 0 && x <= 1 && y >= 0 && y <= 1;
 }
 
-function tileSpeedLabel({ ground, model, speed, tracked, waterSpeedKmh }, surface, deepWater, wading, obstruction) {
+function tileSpeedLabel({ ground, model, speed, tracked, waterSpeedKmh }, surface, deepWater, wadingDepthCm, obstruction) {
   if (ground) {
     if (obstruction === "blocked") return "Blocked";
     if (deepWater) return waterSpeedKmh > 0 ? `${numeric.format(waterSpeedKmh)} km/h` : "Blocked by water";
     if (terrainStatus === "loading" || collisionStatus === "loading") return "Loading tile data…";
-    if (!surface && !wading) return "No terrain sample";
+    if (!surface && wadingDepthCm === 0) return "No terrain sample";
   }
   const flatSpeed = model ? model.samples.at(-1).speed * 3.6 : speed;
   if (!(flatSpeed >= 0.1)) return "Speed unavailable";
   const tileSpeed = ground ? flatSpeed * Terrain.paceForSurface(surface, tracked) : flatSpeed;
-  if (ground && wading) return `${numeric.format(Math.min(tileSpeed, Terrain.wadingSpeedKmh))} km/h (wading estimate)`;
+  if (ground && wadingDepthCm !== 0) {
+    const gear = Terrain.wadingGear(wadingDepthCm, model?.profile);
+    const cap = Terrain.wadingSpeedLimitKmh(wadingDepthCm, model?.profile);
+    const estimate = gear ? `wading estimate, gear ${gear}` : "wading estimate";
+    return `${numeric.format(Math.min(tileSpeed, cap))} km/h (${estimate})`;
+  }
   return `${numeric.format(tileSpeed)} km/h${model ? "" : " (estimate)"}`;
 }
 
@@ -875,9 +881,9 @@ function updateMapCursorLabel() {
       const deepWater = water && Collision.segment(normalized, normalized, water) === "blocked";
       const obstruction = Collision.segment(normalized, normalized, collisionGrid);
       const surface = terrainGrid && Terrain.surfaceAt(normalized.x, normalized.y, terrainGrid, collisionGrid?.water);
-      const wading = Terrain.waterAt(normalized.x, normalized.y, collisionGrid?.wadingWater) || surface?.type === "Water";
+      const wadingDepthCm = Terrain.wadingDepthAt(normalized.x, normalized.y, collisionGrid?.wadingWater, surface);
       for (const comparison of comparisons.values()) {
-        const result = tileSpeedLabel(comparison, surface, deepWater, wading, obstruction);
+        const result = tileSpeedLabel(comparison, surface, deepWater, wadingDepthCm, obstruction);
         lines.push(`${comparison.vehicle.name} · ${result}`);
       }
     }

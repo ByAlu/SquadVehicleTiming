@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
+const { gzipSync } = require("node:zlib");
 const AutoPath = require("../auto-path.js");
 const Collision = require("../collision.js");
 const Terrain = require("../terrain.js");
@@ -100,9 +101,11 @@ test("a depth scan with no deep water takes precedence over terrain Water", asyn
     },
   };
   t.after(() => { delete global.document; });
-  const collision = await Collision.load({ name: "Test" }, [1, 1]);
+  const depths = gzipSync(Uint8Array.of(120)).toString("base64");
+  const collision = await Collision.load({ name: "Test" }, [1, 1], [1, 1, depths]);
 
   assert.deepEqual(Collision.waterGrid(terrain, collision).rows, ["."]);
+  assert.equal(Terrain.wadingDepthAt(0.5, 0.5, collision.wadingWater), 120);
   assert.equal(AutoPath.find({ x: 0.25, y: 0.5 }, { x: 0.75, y: 0.5 }, terrain, 4, 4, {
     tracked: false, speedKmh: 65, collision,
   })?.direct, true);
@@ -124,6 +127,25 @@ test("auto-routing can detour around a slow but passable ford", () => {
   const conditions = Terrain.drivingConditions(crossing.pieces, false);
   assert.ok(conditions.some((piece) => piece.speedLimitKmh === 14));
   assert.ok(conditions.some((piece) => piece.speedLimitKmh === Infinity));
+});
+
+test("auto-routing considers the gear allowed by the sampled wading depth", () => {
+  const grid = { columns: 5, rows: 3 };
+  const land = [0, 0, 0, 0];
+  const terrain = { grid, rows: Array.from({ length: 3 }, () => Array(5).fill(land)), surfaces: [{ type: "Asphalt" }] };
+  const depths = new Uint8Array(15);
+  const collision = { grid, rows: [".....", ".....", "....."], wadingWater: { grid, depths } };
+  const profile = { radiusMeters: 0.5, speedLimitKmh: 60, gears: [{ ratio: 40, limitRpm: 3000 }, { ratio: 10, limitRpm: 3000 }] };
+  const start = { x: 0.1, y: 0.5 };
+  const end = { x: 0.9, y: 0.5 };
+  const options = { tracked: false, speedKmh: 60, collision, profile };
+
+  depths.fill(100, 6, 9);
+  assert.deepEqual(AutoPath.find(start, end, terrain, 50, 30, options), { direct: true, via: [] });
+  depths.fill(101, 6, 9);
+  const result = AutoPath.find(start, end, terrain, 50, 30, options);
+  assert.equal(result?.direct, true);
+  assert.ok(result.via.some(({ y }) => y !== start.y));
 });
 
 test("amphibious routing crosses water without ground support and still avoids mapped blockers", () => {
@@ -178,7 +200,7 @@ function loadMapCollision(t, name) {
   return Collision.load({ name }, script.window.squadWaterData[name], script.window.squadWadingWaterData[name]);
 }
 
-test("the Al Basrah ford uses the wading cap over a Dirt terrain sample", async (t) => {
+test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sample", async (t) => {
   const name = "Al Basrah";
   const terrain = require("../maps/Al Basrah/terrain.json");
   const collision = await loadMapCollision(t, name);
@@ -191,8 +213,14 @@ test("the Al Basrah ford uses the wading cap over a Dirt terrain sample", async 
   assert.equal(Collision.segment(start, end, water), "clear");
   const crossing = Terrain.sampleRoute([start, end], columns * columnSpacingMeters, rows * rowSpacingMeters,
     terrain, null, water, collision.wadingWater);
-  assert.equal(crossing.pieces[0].surface.type, "Dirt");
-  assert.equal(Terrain.drivingConditions(crossing.pieces, false)[0].speedLimitKmh, 14);
+  const catalog = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../vehicles/catalog.js"), "utf8"), catalog);
+  const truck = catalog.window.squadVehicles.find(({ name, faction }) => name === "CTM131 Transport QJY88" && faction === "PLA");
+  const profile = truck.drivingProfiles[0];
+  const [sample] = crossing.pieces;
+  assert.equal(sample.surface.type, "Dirt");
+  assert.equal(Terrain.wadingGear(sample.wadingDepthCm, profile), 1);
+  assert.equal(Terrain.drivingConditions(crossing.pieces, false, profile)[0].speedLimitKmh, 14);
 });
 
 test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {

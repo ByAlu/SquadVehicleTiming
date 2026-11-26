@@ -2,7 +2,7 @@
 
 const Terrain = (() => {
   const maxGrade = 0.45;
-  const wadingSpeedKmh = 14;
+  const fallbackWadingSpeedKmh = 14;
   // Estimated pace as a fraction of the firm-road speed, wheeled then tracked.
   const surfacePace = {
     Dirt: [0.84, 0.93], DirtGravel: [0.88, 0.95], Gravel: [0.9, 0.95],
@@ -115,6 +115,39 @@ const Terrain = (() => {
       Math.min(columns - 1, Math.floor(x * columns))] === "#";
   }
 
+  function wadingDepthInCell(water, column, row) {
+    if (water?.depths) return water.depths[row * water.grid.columns + column] ?? 0;
+    // A legacy wet cell has no measured depth.
+    return water?.rows[row]?.[column] === "#" ? null : 0;
+  }
+
+  function wadingDepthAt(x, y, water, surface) {
+    if (water) {
+      const { columns, rows } = water.grid;
+      const depth = wadingDepthInCell(water, Math.min(columns - 1, Math.floor(x * columns)),
+        Math.min(rows - 1, Math.floor(y * rows)));
+      if (depth !== 0) return depth;
+    }
+    return surface?.type === "Water" ? null : 0;
+  }
+
+  function wadingGear(depthCm, profile) {
+    if (!(depthCm > 0) || !profile || profile.tracked || !(profile.radiusMeters > 0) || !profile.gears?.length) return null;
+    const tireHeightCm = Math.round(200 * profile.radiusMeters);
+    return Math.min(profile.gears.length, depthCm > tireHeightCm ? 1 : 2);
+  }
+
+  function wadingSpeedLimitKmh(depthCm, profile) {
+    if (depthCm === 0) return Infinity;
+    const gear = wadingGear(depthCm, profile);
+    if (!gear) return fallbackWadingSpeedKmh;
+    const { ratio, limitRpm } = profile.gears[gear - 1];
+    const limit = 2 * Math.PI * profile.radiusMeters * limitRpm * 0.06 / ratio;
+    // The CTM131 transport reached 14 km/h in first-gear water at the Al Basrah ford.
+    const observedLimit = gear === 1 && profile.name === "CTM131" ? 14 : Infinity;
+    return Math.min(profile.speedLimitKmh, limit, observedLimit);
+  }
+
   function sampleRoute(points, width, height, terrain, ground = null, water = null, wadingWater = null) {
     const { columns, rows } = terrain.grid;
     const sampleGrid = ground?.grid ?? wadingWater?.grid ?? water?.grid ?? terrain.grid;
@@ -151,8 +184,8 @@ const Terrain = (() => {
         const measuredGrade = ground ? groundGrade(x, y, ux, uy, width, height, ground) : null;
         let grade = 0;
         let surface = null;
-        const wading = waterAt(x, y, wadingWater) || terrain.surfaces[cell?.[3]]?.type === "Water";
-        if (cell || measuredGrade !== null || wading) sampledMeters += horizontal;
+        const wadingDepthCm = wadingDepthAt(x, y, wadingWater, terrain.surfaces[cell?.[3]]);
+        if (cell || measuredGrade !== null || wadingDepthCm !== 0) sampledMeters += horizontal;
         if (cell) {
           surface = terrain.surfaces[cell[3]];
           if (isClassified(surface)) classifiedMeters += horizontal;
@@ -172,7 +205,7 @@ const Terrain = (() => {
           grade = measuredGrade;
         }
         grade = Math.max(-maxGrade, Math.min(maxGrade, grade));
-        pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface, wading });
+        pieces.push({ legIndex: index - 1, distance: horizontal * Math.hypot(1, grade), grade, surface, wadingDepthCm });
       }
     }
     return { pieces, sampledMeters, classifiedMeters, waterMeters };
@@ -190,18 +223,19 @@ const Terrain = (() => {
     return surfacePace[surface?.type]?.[tracked ? 1 : 0] ?? 1;
   }
 
-  function drivingConditions(pieces, tracked) {
-    return pieces.map(({ distance, grade, surface, water, wading }) => {
+  function drivingConditions(pieces, tracked, profile = null) {
+    return pieces.map(({ distance, grade, surface, water, wadingDepthCm = 0 }) => {
       const pace = paceForSurface(surface, tracked);
       const friction = surface?.type !== "Water" && Number.isFinite(surface?.friction) && surface.friction > 0
         ? surface.friction
         : 1;
-      const speedLimitKmh = wading ? wadingSpeedKmh : Infinity;
+      const speedLimitKmh = wadingSpeedLimitKmh(wadingDepthCm, profile);
       return { distance, grade, speedFactor: paceForGrade(grade, pace), powerFactor: pace, gripFactor: friction, water, speedLimitKmh };
     });
   }
 
-  return { maxGrade, wadingSpeedKmh, load, drawSurfaceOverlay, surfaceAt, waterAt, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
+  return { maxGrade, load, drawSurfaceOverlay, surfaceAt, waterAt, wadingDepthAt, wadingDepthInCell, wadingGear,
+    wadingSpeedLimitKmh, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 
 if (typeof module !== "undefined") module.exports = Terrain;

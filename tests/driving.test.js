@@ -68,7 +68,28 @@ test("the driving model respects the wading speed cap on flat ground", () => {
   const model = Driving.prepare(profile);
   const piece = { distance: 200, grade: 0, surface: null };
   const dry = Terrain.drivingConditions([piece], false);
-  const wet = Terrain.drivingConditions([{ ...piece, wading: true }], false);
+  const wet = Terrain.drivingConditions([{ ...piece, wadingDepthCm: null }], false);
   assert.ok(Driving.travelTerrainSeconds(wet, model) > piece.distance / (14 / 3.6));
   assert.ok(Driving.travelTerrainSeconds(wet, model) > Driving.travelTerrainSeconds(dry, model));
+});
+
+test("wading uses second gear up to tire height and first gear above it", () => {
+  const wheeled = { ...profile, gears: [{ ratio: 15, limitRpm: 3000, shiftRpm: 2700 }, { ratio: 10, limitRpm: 3000 }] };
+  const piece = { distance: 200, grade: 0, surface: null };
+  assert.equal(Terrain.wadingGear(100, wheeled), 2);
+  assert.equal(Terrain.wadingGear(101, wheeled), 1);
+  assert.equal(Terrain.wadingGear(50, { ...wheeled, gears: wheeled.gears.slice(0, 1) }), 1);
+  const ctm131 = { ...wheeled, name: "CTM131", radiusMeters: 0.57 };
+  assert.equal(Terrain.wadingGear(114, ctm131), 2);
+  assert.equal(Terrain.wadingGear(115, ctm131), 1);
+  const [tireDeep, aboveTires] = Terrain.drivingConditions(
+    [{ ...piece, wadingDepthCm: 100 }, { ...piece, wadingDepthCm: 101 }], false, wheeled);
+  assert.ok(Math.abs(tireDeep.speedLimitKmh - 18 * Math.PI) < 1e-9);
+  assert.ok(Math.abs(aboveTires.speedLimitKmh - 12 * Math.PI) < 1e-9);
+  const model = Driving.prepare(wheeled);
+  assert.ok(Driving.travelTerrainSeconds([aboveTires], model) > Driving.travelTerrainSeconds([tireDeep], model));
+  assert.equal(Terrain.wadingSpeedLimitKmh(101, { ...wheeled, tracked: true }), 14);
+  assert.equal(Terrain.wadingSpeedLimitKmh(null, wheeled), 14);
+  assert.equal(Terrain.wadingSpeedLimitKmh(101, { ...wheeled, name: "CTM131" }), 14);
+  assert.equal(Terrain.wadingSpeedLimitKmh(100, { ...wheeled, name: "CTM131" }), tireDeep.speedLimitKmh);
 });

@@ -39,7 +39,7 @@ const AutoPath = (() => {
     }
   }
 
-  function find(start, end, terrain, width, height, { tracked, speedKmh, waterSpeedKmh, collision }) {
+  function find(start, end, terrain, width, height, { tracked, speedKmh, waterSpeedKmh, collision, profile }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
     const searchGrid = collision?.grid ?? terrain.grid;
     const { columns, rows } = searchGrid;
@@ -53,7 +53,6 @@ const AutoPath = (() => {
     const dxMeters = width / columns;
     const dyMeters = height / rows;
     const speed = speedKmh / 3.6;
-    const wadingSpeed = terrainMath.wadingSpeedKmh / 3.6;
     const fastestSpeed = Math.max(waterSpeed, speed * terrainMath.paceForGrade(-terrainMath.maxGrade, 1));
     const diagonal = Math.hypot(dxMeters, dyMeters);
     const steps = directions.map(([dx, dy]) => ({ dx, dy, distance: Math.hypot(dx * dxMeters, dy * dyMeters) }));
@@ -75,8 +74,9 @@ const AutoPath = (() => {
     function speedAt(x, y, surfaceIndex, pace) {
       if (waterSpeed && waterAt(x, y)) return waterSpeed;
       const landSpeed = speed * pace * (cellPace[surfaceIndex] ?? 1);
-      return collision?.wadingWater?.rows[y]?.[x] === "#" || terrain.surfaces[surfaceIndex]?.type === "Water"
-        ? Math.min(landSpeed, wadingSpeed) : landSpeed;
+      const sample = terrainMath.wadingDepthInCell(collision?.wadingWater, x, y);
+      const depth = sample === 0 && terrain.surfaces[surfaceIndex]?.type === "Water" ? null : sample;
+      return depth === 0 ? landSpeed : Math.min(landSpeed, terrainMath.wadingSpeedLimitKmh(depth, profile) / 3.6);
     }
 
     function passable(x, y) {
