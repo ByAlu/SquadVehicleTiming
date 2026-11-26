@@ -62,7 +62,7 @@ All 25 maps with a calibrated SDK gameplay layer include a collision grid at rou
 .\tools\export-collision.ps1 -Map 'Logar Valley' -SpacingMeters 4
 ```
 
-The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified. The grid also stores the support elevation in decimeters for slope-aware routing and timing.
+The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision profile. A downward trace finds landscape or a road or bridge surface. A box probe above that surface records blockers inside each grid cell, including small walls that a terrain sample can miss. Both traces ignore layer-specific team staging and main-base protection actors. Physical obstacles inside those zones still count. Rows in `maps/<map>/collision.js` use `#` for a blocker, `.` for no hit, and `?` when no support surface could be identified. The grid also stores the support elevation in decimeters for slope-aware routing and timing.
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a single-height, static collision grid with one probe size. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 

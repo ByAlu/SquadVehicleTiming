@@ -213,6 +213,19 @@ test("Yehorivka marks the verified barns, house, and walls as obstacles", async 
   assert.equal(Collision.segment(openCell, openCell, collision), "clear");
 });
 
+test("Black Coast ignores both staging barriers and detects overlapping physical obstacles", async (t) => {
+  const collision = await loadMapCollision(t, "Black Coast");
+  const { columns, rows } = collision.grid;
+  for (const [column, row, blocked] of [
+    [831, 175, false], [834, 175, true],
+    [647, 737, false], [648, 737, true], [650, 737, true],
+  ]) {
+    const point = { x: (column + 0.5) / columns, y: (row + 0.5) / rows };
+    assert.equal(Collision.overlayLabelAt(point.x, point.y, collision), blocked ? "Solid obstacle" : "Clear ground", `${column}, ${row}`);
+    assert.equal(Collision.segment(point, point, collision), blocked ? "blocked" : "clear", `${column}, ${row}`);
+  }
+});
+
 test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sample", async (t) => {
   const name = "Al Basrah";
   const terrain = require("../maps/Al Basrah/terrain.json");

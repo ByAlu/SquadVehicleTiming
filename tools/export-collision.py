@@ -42,8 +42,14 @@ def is_support(component, actor, cache):
     return cache[component]
 
 
-def find_support(world, x, y, cache):
-    ignored = []
+def layer_zone_actors():
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    zone_types = (unreal.SQTeamPrep, unreal.SQProtectionZone)
+    return [actor for actor in actor_subsystem.get_all_level_actors() if isinstance(actor, zone_types)]
+
+
+def find_support(world, x, y, cache, ignored_actors=()):
+    ignored = list(ignored_actors)
     start = unreal.Vector(x, y, 250000)
     end = unreal.Vector(x, y, -250000)
     while True:
@@ -59,8 +65,8 @@ def find_support(world, x, y, cache):
         ignored.append(actor)
 
 
-def check_cell(world, x, y, dx, dy, cache):
-    support = find_support(world, x, y, cache)
+def check_cell(world, x, y, dx, dy, cache, ignored_actors=()):
+    support = find_support(world, x, y, cache, ignored_actors)
     if support is None:
         return "?", -32768
     z, normal, landscape = support
@@ -69,7 +75,9 @@ def check_cell(world, x, y, dx, dy, cache):
     center = unreal.Vector(x, y, z + 145 + rise)
     end = unreal.Vector(x, y, center.z - 1)
     extent = unreal.Vector(dx / 2, dy / 2, 100)
-    ignored = [landscape] if landscape else []
+    ignored = list(ignored_actors)
+    if landscape:
+        ignored.append(landscape)
     hit = TRACE.box_trace_single_by_profile(world, center, end, extent, unreal.Rotator(), PROFILE,
                                            False, ignored, DEBUG, False)
     return ("#" if hit is not None and hit.to_tuple()[0] else "."), round(z / 10)
@@ -198,11 +206,13 @@ def export_map(entry, spacing, collider_objects=False, water=False):
     rows = []
     heights = array("h")
     cache = {}
+    ignored_actors = layer_zone_actors()
+    unreal.log(f"Squad collision: {entry['name']} ignores {len(ignored_actors)} layer-specific staging and protection actors.")
     for row in range(row_count):
         y = y_min + (row + 0.5) * dy
         cells = []
         for column in range(columns):
-            status, height = check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache)
+            status, height = check_cell(world, x_min + (column + 0.5) * dx, y, dx, dy, cache, ignored_actors)
             cells.append(status)
             heights.append(height)
         rows.append("".join(cells))
