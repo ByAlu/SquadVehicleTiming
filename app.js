@@ -17,10 +17,11 @@ const image = find("map-image");
 const overlay = find("overlay");
 const terrainOverlay = find("terrain-overlay");
 const terrainOverlayToggle = find("terrain-overlay-toggle");
+const speedOverlayToggle = find("speed-overlay-toggle");
 const terrainKey = find("terrain-key");
 const terrainLegend = find("terrain-legend");
 const terrainOverlayStatus = find("terrain-overlay-status");
-const terrainCursor = find("terrain-cursor");
+const mapCursorLabel = find("map-cursor-label");
 const cursor = find("cursor");
 const mapMessage = find("map-message");
 const svgNamespace = "http://www.w3.org/2000/svg";
@@ -71,8 +72,10 @@ function selectMap() {
   paintedWater = null;
   collisionGrid = null;
   terrainStatus = map.sourceLayer ? "loading" : "unavailable";
-  updateTerrainOverlay();
   collisionStatus = map.sourceLayer ? "loading" : "unavailable";
+  drawnWidth = 0;
+  drawnHeight = 0;
+  updateTerrainOverlay();
   clearRoute();
   find("map-heading").textContent = map.name;
   viewport.setAttribute("aria-label", `${map.name} route map`);
@@ -81,8 +84,6 @@ function selectMap() {
     : "SDK dimensions unavailable for this map.";
   updateEstimate();
   stage.classList.remove("ready");
-  drawnWidth = 0;
-  drawnHeight = 0;
   updateButtons();
   mapMessage.hidden = false;
   mapMessage.textContent = "Loading minimap…";
@@ -115,6 +116,7 @@ function selectMap() {
     }).catch(() => {
       if (request !== loadId) return;
       collisionStatus = "unavailable";
+      updateMapCursorLabel();
       updateEstimate();
       updateButtons();
     });
@@ -172,7 +174,7 @@ function updateTerrainOverlay() {
       paintedWater = water;
     }
   }
-  updateTerrainCursor();
+  updateMapCursorLabel();
 }
 
 function selectFaction() {
@@ -214,6 +216,7 @@ function refreshVehicleEstimate(index) {
   for (const estimates of routeEstimates.values()) estimates.delete(index);
   updateEstimate();
   updateButtons();
+  updateMapCursorLabel();
 }
 
 function canAutoRoute({ ground, model, speed }) {
@@ -779,7 +782,7 @@ function positionMap() {
   left = maxLeft > 0 ? maxLeft / 2 : Math.max(maxLeft, Math.min(left, 0));
   mapTop = maxTop > 0 ? maxTop / 2 : Math.max(maxTop, Math.min(mapTop, 0));
   stage.style.transform = `translate(${left}px, ${mapTop}px)`;
-  updateTerrainCursor();
+  updateMapCursorLabel();
 }
 
 function layoutMap(nextZoom, anchorX, anchorY) {
@@ -827,9 +830,24 @@ function inside({ x, y }) {
   return x >= 0 && x <= 1 && y >= 0 && y <= 1;
 }
 
-function updateTerrainCursor() {
-  if (terrainOverlay.hidden || !paintedTerrain || !drawnWidth || !drawnHeight) {
-    terrainCursor.hidden = true;
+function tileSpeedLabel({ ground, model, speed, tracked, waterSpeedKmh }, surface, deepWater, obstruction) {
+  if (ground) {
+    if (obstruction === "blocked") return "Blocked";
+    if (deepWater) return waterSpeedKmh > 0 ? `${numeric.format(waterSpeedKmh)} km/h` : "Blocked by water";
+    if (terrainStatus === "loading" || collisionStatus === "loading") return "Loading tile data…";
+    if (!surface) return "No terrain sample";
+  }
+  const flatSpeed = model ? model.samples.at(-1).speed * 3.6 : speed;
+  if (!(flatSpeed >= 0.1)) return "Speed unavailable";
+  const tileSpeed = ground ? flatSpeed * Terrain.paceForSurface(surface, tracked) : flatSpeed;
+  return `${numeric.format(tileSpeed)} km/h${model ? "" : " (estimate)"}`;
+}
+
+function updateMapCursorLabel() {
+  const showTerrain = !terrainOverlay.hidden && paintedTerrain;
+  const showSpeed = speedOverlayToggle.getAttribute("aria-pressed") === "true";
+  if ((!showTerrain && !showSpeed) || !drawnWidth || !drawnHeight) {
+    mapCursorLabel.hidden = true;
     return;
   }
   const point = terrainPointer ? localPoint(terrainPointer) : keyboardActive
@@ -838,20 +856,38 @@ function updateTerrainCursor() {
   const normalized = point && mapPoint(point);
   if (!point || point.x < 0 || point.x >= viewport.clientWidth || point.y < 0 || point.y >= viewport.clientHeight ||
       !inside(normalized)) {
-    terrainCursor.hidden = true;
+    mapCursorLabel.hidden = true;
     return;
   }
-  const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain, paintedWater);
-  const label = surface ? surfaceName(surface.type) : "No terrain sample";
-  if (terrainCursor.textContent !== label) terrainCursor.textContent = label;
-  terrainCursor.hidden = false;
+  const lines = [];
+  if (showTerrain) {
+    const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain, paintedWater);
+    lines.push(surface ? surfaceName(surface.type) : "No terrain sample");
+  }
+  if (showSpeed) {
+    if (!comparisons.size) {
+      lines.push("Add a vehicle to see tile speeds");
+    } else {
+      const water = Collision.waterGrid(terrainGrid, collisionGrid);
+      const deepWater = water && Collision.segment(normalized, normalized, water) === "blocked";
+      const obstruction = Collision.segment(normalized, normalized, collisionGrid);
+      const surface = terrainGrid && Terrain.surfaceAt(normalized.x, normalized.y, terrainGrid, collisionGrid?.water);
+      for (const comparison of comparisons.values()) {
+        const result = tileSpeedLabel(comparison, surface, deepWater, obstruction);
+        lines.push(`${comparison.vehicle.name} · ${result}`);
+      }
+    }
+  }
+  const label = lines.join("\n");
+  if (mapCursorLabel.textContent !== label) mapCursorLabel.textContent = label;
+  mapCursorLabel.hidden = false;
   const gap = 12;
-  const width = terrainCursor.offsetWidth;
-  const height = terrainCursor.offsetHeight;
+  const width = mapCursorLabel.offsetWidth;
+  const height = mapCursorLabel.offsetHeight;
   const x = point.x + gap + width <= viewport.clientWidth ? point.x + gap : Math.max(0, point.x - gap - width);
   const y = point.y + gap + height <= viewport.clientHeight ? point.y + gap : Math.max(0, point.y - gap - height);
-  terrainCursor.style.left = `${x}px`;
-  terrainCursor.style.top = `${y}px`;
+  mapCursorLabel.style.left = `${x}px`;
+  mapCursorLabel.style.top = `${y}px`;
 }
 
 function nodeIndexAt(point) {
@@ -923,7 +959,7 @@ viewport.addEventListener("pointerdown", (event) => {
   gesture = { id: event.pointerId, position, moved: false };
   viewport.setPointerCapture(event.pointerId);
   renderRoute();
-  updateTerrainCursor();
+  updateMapCursorLabel();
 });
 
 viewport.addEventListener("pointermove", (event) => {
@@ -939,12 +975,12 @@ viewport.addEventListener("pointermove", (event) => {
     }
     if (Math.hypot(position.x - gesture.position.x, position.y - gesture.position.y) > 5) gesture.moved = true;
   }
-  updateTerrainCursor();
+  updateMapCursorLabel();
 });
 
 viewport.addEventListener("pointerleave", () => {
   terrainPointer = null;
-  updateTerrainCursor();
+  updateMapCursorLabel();
 });
 
 for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
@@ -993,7 +1029,7 @@ viewport.addEventListener("keydown", (event) => {
     keyboardActive = true;
     terrainPointer = null;
     selectOrAddNode(keyboardPoint);
-    updateTerrainCursor();
+    updateMapCursorLabel();
   } else if (event.key === "Delete" && keyboardActive) {
     removeNodeAt(keyboardPoint);
   } else if (event.key === "+" || event.key === "=") {
@@ -1011,7 +1047,7 @@ viewport.addEventListener("keydown", (event) => {
 viewport.addEventListener("blur", () => {
   keyboardActive = false;
   renderRoute();
-  updateTerrainCursor();
+  updateMapCursorLabel();
 });
 
 if (sdk?.maps.length && vehicles?.length) {
@@ -1035,6 +1071,10 @@ if (sdk?.maps.length && vehicles?.length) {
   terrainOverlayToggle.addEventListener("click", () => {
     terrainOverlayToggle.setAttribute("aria-pressed", String(terrainOverlayToggle.getAttribute("aria-pressed") !== "true"));
     updateTerrainOverlay();
+  });
+  speedOverlayToggle.addEventListener("click", () => {
+    speedOverlayToggle.setAttribute("aria-pressed", String(speedOverlayToggle.getAttribute("aria-pressed") !== "true"));
+    updateMapCursorLabel();
   });
   find("draw").addEventListener("click", () => setMode("draw"));
   find("pan").addEventListener("click", () => setMode("pan"));
