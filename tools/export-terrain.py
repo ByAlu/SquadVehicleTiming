@@ -1,12 +1,15 @@
 """Sample physical surfaces from Squad gameplay maps in Unreal Editor."""
 
+from base64 import b64encode
+import gzip
 import json
 import math
 import os
 from pathlib import Path
 import re
 import runpy
-from tempfile import NamedTemporaryFile
+from struct import Struct
+from tempfile import NamedTemporaryFile, TemporaryFile
 
 import unreal
 
@@ -14,6 +17,9 @@ import unreal
 ROOT = Path(__file__).resolve().parents[1]
 SDK = runpy.run_path(str(Path(__file__).with_name("export-sdk.py")))
 BUILD_GRID = runpy.run_path(str(Path(__file__).with_name("build-terrain.py")))["build_grid"]
+CELL = Struct("<hiiH")
+MISSING_GRADE = -2147483648
+EMPTY_CELL = (-32768, MISSING_GRADE, MISSING_GRADE, 0)
 
 
 def surface_names(project):
@@ -114,18 +120,17 @@ def trace_surface(world, x, y):
         ignored.append(actor)
 
 
-def write_grid(path, metadata, rows):
+def write_grid(path, metadata, cells):
     header = json.dumps(metadata, indent=2, ensure_ascii=False, allow_nan=False)
     stream = NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=path.parent, delete=False)
     temporary = Path(stream.name)
     try:
         with stream:
-            stream.write(header.removesuffix("\n}") + ',\n  "rows": [\n')
-            for index, row in enumerate(rows):
-                if index:
-                    stream.write(",\n")
-                stream.write("    " + json.dumps(row, separators=(",", ":"), allow_nan=False))
-            stream.write("\n  ]\n}\n")
+            stream.write(header.removesuffix("\n}") + ',\n  "cellsGzipBase64": "')
+            cells.seek(0)
+            while chunk := cells.read(3 * 65536):
+                stream.write(b64encode(chunk).decode("ascii"))
+            stream.write('"\n}\n')
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
@@ -158,31 +163,9 @@ def export_map(entry, spacing_m, names, version):
     indices = {}
     material_cache = {}
     surfaces = []
-    rows = []
     sampled = 0
-    for row in range(rows_count):
-        cells = []
-        y = y_min + (row + 0.5) * dy * 100
-        for col in range(cols_count):
-            x = x_min + (col + 0.5) * dx * 100
-            hit = trace_surface(world, x, y)
-            if hit is None:
-                cells.append(None)
-                continue
-            impact, normal, material, component, face_index = hit
-            elevation_dm = round(impact.z / 10)
-            grade_right = round(-1000 * normal.x / normal.z) if normal.z > 0.01 else None
-            grade_down = round(-1000 * normal.y / normal.z) if normal.z > 0.01 else None
-            cells.append([elevation_dm, grade_right, grade_down,
-                          surface_id(component, material, face_index, names, surfaces, indices, material_cache)])
-            sampled += 1
-        rows.append(cells)
-
-    if sampled == 0:
-        raise RuntimeError(f"{world_path} returned no blocking terrain samples.")
-
     metadata = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "sdkVersion": version,
         "map": name,
         "sourceLayer": layer_path,
@@ -197,18 +180,39 @@ def export_map(entry, spacing_m, names, version):
             "downWorldDirection": [0, 1],
             "cellFields": ["elevationDecimeters", "gradeRightPerThousand", "gradeDownPerThousand", "surfaceIndex"],
         },
-        "sampleCount": sampled,
         "surfaces": surfaces,
     }
     output = ROOT / "maps" / name / "terrain.json"
-    write_grid(output, metadata, rows)
+    with TemporaryFile(dir=output.parent) as packed:
+        with gzip.GzipFile(filename="", fileobj=packed, mode="wb", compresslevel=3, mtime=0) as encoded:
+            cells = bytearray(cols_count * CELL.size)
+            for row in range(rows_count):
+                y = y_min + (row + 0.5) * dy * 100
+                for col in range(cols_count):
+                    x = x_min + (col + 0.5) * dx * 100
+                    hit = trace_surface(world, x, y)
+                    values = EMPTY_CELL
+                    if hit is not None:
+                        impact, normal, material, component, face_index = hit
+                        elevation_dm = round(impact.z / 10)
+                        grade_right = round(-1000 * normal.x / normal.z) if normal.z > 0.01 else MISSING_GRADE
+                        grade_down = round(-1000 * normal.y / normal.z) if normal.z > 0.01 else MISSING_GRADE
+                        surface = surface_id(component, material, face_index, names, surfaces, indices, material_cache)
+                        values = (elevation_dm, grade_right, grade_down, surface)
+                        sampled += 1
+                    CELL.pack_into(cells, col * CELL.size, *values)
+                encoded.write(cells)
+        if not sampled:
+            raise RuntimeError(f"{world_path} returned no blocking terrain samples.")
+        metadata["sampleCount"] = sampled
+        write_grid(output, metadata, packed)
     BUILD_GRID(output)
     unreal.log(f"Squad terrain: wrote {output}: {sampled}/{rows_count * cols_count} samples, {len(surfaces)} surfaces.")
 
 
 def main():
     options = json.loads(os.environ.get("SQUAD_ROUTE_TERRAIN_OPTIONS", "{}"))
-    spacing_m = options.get("spacingMeters", 16)
+    spacing_m = options.get("spacingMeters", 1)
     requested = options.get("maps", [])
     catalog = (ROOT / "sdk-data.js").read_text(encoding="utf-8")
     entries = json.loads(catalog.split("window.squadSdkData = ", 1)[1].strip().removesuffix(";"))["maps"]

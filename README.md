@@ -36,10 +36,10 @@ The SDK vehicle stats table has no rows in v10.6.1. Measured acceleration from r
 
 ## Terrain data
 
-Export the terrain grid for one or more maps from the repository in PowerShell. Use `-SpacingMeters` to trade file size and export time for finer samples.
+Export the terrain grid for one or more maps from the repository in PowerShell. New exports default to 1 m spacing. Use `-SpacingMeters` for a coarser grid and a faster export.
 
 ```powershell
-.\tools\export-terrain.ps1 -Map 'Yehorivka','Logar Valley' -SpacingMeters 16
+.\tools\export-terrain.ps1 -Map 'Logar Valley'
 ```
 
 Omit `-Map` to export the maps with calibrated SDK bounds in `sdk-data.js`. The editor loads the gameplay worlds locally and writes `maps/<map>/terrain.json`. Loading a map for the first time may take several minutes while Unreal builds cached assets.
@@ -48,11 +48,11 @@ The rows follow the minimap from top to bottom and the cells from left to right.
 
 Each hit stores **world Z in decimeters**, **grade to the right**, **grade downward**, and a **surface index**. The elevation datum is the Unreal map's Z origin. A grade of 100 represents a 10% climb. For a route heading given as a unit vector in map meters, multiply each grade by its matching heading component and add them to get the directional grade. Surface entries preserve the SDK physical surface name, collision source, material asset, and friction values where available.
 
-A `null` cell means the vehicle collision trace found no blocking surface. The scan skips invisible collision volumes and instanced foliage. It can still hit roads, bridges, roofs, and other solid geometry. Water that only overlaps vehicles may appear as the riverbed below. Narrow features can fall between samples.
+An unsampled cell means the vehicle collision trace found no blocking surface. The scan skips invisible collision volumes and instanced foliage. It can still hit roads, bridges, roofs, and other solid geometry. Water that only overlaps vehicles may appear as the riverbed below. Narrow features can fall between samples.
 
 `materialSource` records how the physical material was resolved. A trace result or a collision override identifies the material directly. A mesh material or landscape default is a fallback. An unknown surface still carries elevation and grade when its collision was sampled.
 
-The exporter also builds each map's compressed browser bundle. After editing the JSON grids, run `python tools/build-terrain.py` to rebuild the bundles. The planner loads one map at a time, including when opened directly from disk in a current browser.
+New grids store their samples as gzip-compressed binary records inside the JSON. Each little-endian record stores a signed 16-bit elevation, two signed 32-bit grades, and an unsigned 16-bit surface index. Elevation `-32768` marks an unsampled cell, and grade `-2147483648` marks a missing grade. The exporter also builds each map's browser bundle. Run `python tools/build-terrain.py` to rebuild the bundles. The planner loads one map at a time, including when opened directly from disk in a current browser.
 
 ## Vehicle collision data
 

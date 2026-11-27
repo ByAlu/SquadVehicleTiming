@@ -18,14 +18,41 @@ const Terrain = (() => {
     Sand: "#f0d283", Snow: "#f4f8ff", Tile: "#86b1b2", Unknown: "#505963", Water: "#4194e3", Wood: "#ad8750",
   };
   const waterSurface = { type: "Water" };
+  const packedCells = new WeakMap();
+  const cellBytes = 12;
+  const missingGrade = -2147483648;
+
+  function rememberCells(terrain, buffer, offset = 0, length = buffer.byteLength) {
+    if (length !== terrain.grid.columns * terrain.grid.rows * cellBytes) {
+      throw new Error("Invalid packed terrain grid.");
+    }
+    const cells = new DataView(buffer, offset, length);
+    packedCells.set(terrain, cells);
+    return cells;
+  }
+
+  function cellsFor(terrain) {
+    const cached = packedCells.get(terrain);
+    if (cached || terrain.schemaVersion !== 2) return cached;
+    // Node callers can read terrain.json directly without loading the browser bundle.
+    const bytes = require("node:zlib").gunzipSync(Buffer.from(terrain.cellsGzipBase64, "base64"));
+    return rememberCells(terrain, bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  }
+
+  function decompress(payload) {
+    const text = atob(payload);
+    const bytes = new Uint8Array(text.length);
+    for (let index = 0; index < text.length; index++) bytes[index] = text.charCodeAt(index);
+    return new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  }
 
   async function load(map) {
     const script = document.createElement("script");
     script.src = `maps/${encodeURIComponent(map.name)}/terrain.js`;
-    const payload = await new Promise((resolve, reject) => {
+    const bundle = await new Promise((resolve, reject) => {
       script.onload = () => {
         script.remove();
-        resolve(script.terrainPayload);
+        resolve(script.terrainData ?? script.terrainPayload);
       };
       script.onerror = () => {
         script.remove();
@@ -33,11 +60,19 @@ const Terrain = (() => {
       };
       document.head.append(script);
     });
-    const bytes = Uint8Array.from(atob(payload), (value) => value.charCodeAt(0));
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const data = await new Response(stream).json();
-    if (data.map !== map.name || data.schemaVersion !== 1 || !data.grid?.rows || !data.grid?.columns) {
+    const data = typeof bundle === "string" ? await new Response(decompress(bundle)).json() : bundle;
+    if (data?.map !== map.name || ![1, 2].includes(data.schemaVersion) || !data.grid?.rows || !data.grid?.columns) {
       throw new Error("Terrain bundle does not match the selected map.");
+    }
+    if (data.schemaVersion === 2) {
+      const cells = new Uint8Array(data.grid.columns * data.grid.rows * cellBytes);
+      let offset = 0;
+      for await (const chunk of decompress(data.cellsGzipBase64)) {
+        cells.set(chunk, offset);
+        offset += chunk.length;
+      }
+      rememberCells(data, cells.buffer, 0, offset);
+      delete data.cellsGzipBase64;
     }
     return data;
   }
@@ -71,10 +106,31 @@ const Terrain = (() => {
     return [...legend].sort(([left], [right]) => left.localeCompare(right));
   }
 
+  function cellAt(terrain, column, row) {
+    const { columns, rows } = terrain.grid;
+    if (!(column >= 0 && column < columns && row >= 0 && row < rows)) return null;
+    const cells = cellsFor(terrain);
+    if (!cells) return terrain.rows[row]?.[column];
+    const offset = (row * columns + column) * cellBytes;
+    const height = cells.getInt16(offset, true);
+    if (height === -32768) return null;
+    const right = cells.getInt32(offset + 2, true);
+    const down = cells.getInt32(offset + 6, true);
+    return [height, right === missingGrade ? null : right, down === missingGrade ? null : down,
+      cells.getUint16(offset + 10, true)];
+  }
+
+  function surfaceIndexAt(terrain, column, row) {
+    const cells = cellsFor(terrain);
+    if (!cells) return terrain.rows[row]?.[column]?.[3];
+    const offset = (row * terrain.grid.columns + column) * cellBytes;
+    return cells.getInt16(offset, true) === -32768 ? undefined : cells.getUint16(offset + 10, true);
+  }
+
   function sampleCell(x, y, terrain) {
     if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
     const { columns, rows } = terrain.grid;
-    return terrain.rows[Math.min(rows - 1, Math.floor(y * rows))]?.[Math.min(columns - 1, Math.floor(x * columns))];
+    return cellAt(terrain, Math.min(columns - 1, Math.floor(x * columns)), Math.min(rows - 1, Math.floor(y * rows)));
   }
 
   function surfaceAt(x, y, terrain, water = null) {
@@ -88,7 +144,10 @@ const Terrain = (() => {
       x = (column + 0.5) / columns;
       y = (row + 0.5) / rows;
     }
-    return terrain.surfaces[sampleCell(x, y, terrain)?.[3]] ?? null;
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    const { columns, rows } = terrain.grid;
+    return terrain.surfaces[surfaceIndexAt(terrain, Math.min(columns - 1, Math.floor(x * columns)),
+      Math.min(rows - 1, Math.floor(y * rows)))] ?? null;
   }
 
   function groundGrade(x, y, ux, uy, width, height, ground) {
@@ -238,7 +297,7 @@ const Terrain = (() => {
     });
   }
 
-  return { maxGrade, load, drawSurfaceOverlay, surfaceAt, waterAt, wadingDepthAt, wadingDepthInCell, wadingGear,
+  return { maxGrade, load, drawSurfaceOverlay, cellAt, surfaceIndexAt, surfaceAt, waterAt, wadingDepthAt, wadingDepthInCell, wadingGear,
     wadingSpeedLimitKmh, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 

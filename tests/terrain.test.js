@@ -2,7 +2,34 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const { gzipSync } = require("node:zlib");
 const Terrain = require("../terrain.js");
+const Collision = require("../collision.js");
+
+test("packed terrain bundles preserve surfaces, steep grades, and missing samples", async (t) => {
+  const cells = Buffer.alloc(36);
+  cells.writeInt16LE(150, 0);
+  cells.writeInt32LE(45000, 2);
+  cells.writeInt32LE(-2147483648, 6);
+  cells.writeInt16LE(-32768, 12);
+  cells.writeInt16LE(-60, 24);
+  cells.writeUInt16LE(1, 34);
+  const data = { map: "Packed test", schemaVersion: 2, grid: { columns: 3, rows: 1 },
+    surfaces: [{ type: "Dirt" }, { type: "Water" }], cellsGzipBase64: gzipSync(cells).toString("base64") };
+  global.document = {
+    createElement: () => ({ remove() {} }),
+    head: { append(script) { script.terrainData = { ...data }; script.onload(); } },
+  };
+  t.after(() => { delete global.document; });
+
+  const terrain = await Terrain.load({ name: data.map });
+  assert.deepEqual(Terrain.cellAt(terrain, 0, 0), [150, 45000, null, 0]);
+  assert.equal(Terrain.cellAt(terrain, 1, 0), null);
+  assert.equal(Terrain.cellAt(terrain, 3, 0), null);
+  assert.equal(Terrain.surfaceAt(0.9, 0.5, terrain).type, "Water");
+  assert.deepEqual(Collision.waterGrid(terrain, null).rows, ["..#"]);
+  assert.deepEqual(Terrain.cellAt(data, 2, 0), [-60, 0, 0, 1]);
+});
 
 test("terrain overlay and cursor use deep water at the mask resolution", () => {
   const sand = { type: "Sand" };

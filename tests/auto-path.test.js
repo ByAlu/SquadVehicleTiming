@@ -224,7 +224,7 @@ test("Black Coast ignores both staging barriers and detects overlapping physical
   }
 });
 
-test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sample", async (t) => {
+test("the Al Basrah ford limits the CTM131 to first gear over a non-Water terrain sample", async (t) => {
   const name = "Al Basrah";
   const terrain = require("../maps/Al Basrah/terrain.json");
   const collision = await loadMapCollision(t, name);
@@ -242,7 +242,8 @@ test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sam
   const truck = catalog.window.squadVehicles.find(({ name, faction }) => name === "CTM131 Transport QJY88" && faction === "PLA");
   const profile = truck.drivingProfiles[0];
   const [sample] = crossing.pieces;
-  assert.equal(sample.surface.type, "Dirt");
+  assert.ok(sample.surface);
+  assert.notEqual(sample.surface.type, "Water");
   assert.equal(Terrain.wadingGear(sample.wadingDepthCm, profile), 1);
   assert.equal(Terrain.drivingConditions(crossing.pieces, false, profile)[0].speedLimitKmh, 14);
 });

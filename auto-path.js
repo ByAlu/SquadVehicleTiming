@@ -70,7 +70,7 @@ const AutoPath = (() => {
     const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
     const unsafe = (a, b) => (!waterSpeed && water && collisionMath.segment(a, b, water) === "blocked") ||
       (collision && collisionMath.segment(a, b, collision, waterSupport) !== "clear");
-    const terrainAt = (x, y) => terrain.rows[terrainRows[y]]?.[terrainColumns[x]];
+    const terrainAt = (x, y) => terrainMath.cellAt(terrain, terrainColumns[x], terrainRows[y]);
     const waterAt = (x, y) => sameWaterGrid && water.rows[y]?.[x] === "#";
 
     function speedAt(x, y, surfaceIndex, pace) {

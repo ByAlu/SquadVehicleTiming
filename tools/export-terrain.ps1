@@ -1,8 +1,8 @@
 param(
     [string]$SdkRoot = 'C:\SqSDK\SquadEditor',
     [string[]]$Map = @(),
-    [ValidateRange(4, 128)]
-    [int]$SpacingMeters = 16
+    [ValidateRange(1, 128)]
+    [int]$SpacingMeters = 1
 )
 
 $ErrorActionPreference = 'Stop'

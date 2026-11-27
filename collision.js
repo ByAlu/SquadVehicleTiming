@@ -1,6 +1,7 @@
 "use strict";
 
 const Collision = (() => {
+  const terrainMath = typeof module === "undefined" ? Terrain : require("./terrain.js");
   const elevationsByGrid = new WeakMap();
   const mappedWaterByTerrain = new WeakMap();
   const alignedWaterByCollision = new WeakMap();
@@ -148,9 +149,9 @@ const Collision = (() => {
     if (!terrain) return null;
     if (!mappedWaterByTerrain.has(terrain)) {
       const water = terrain.surfaces.map((surface) => surface.type === "Water");
-      const rows = water.includes(true)
-        ? terrain.rows.map((row) => row.map((cell) => water[cell?.[3]] ? "#" : ".").join(""))
-        : null;
+      const rows = water.includes(true) ? Array.from({ length: terrain.grid.rows }, (_, row) =>
+        Array.from({ length: terrain.grid.columns }, (_, column) =>
+          water[terrainMath.surfaceIndexAt(terrain, column, row)] ? "#" : ".").join("")) : null;
       mappedWaterByTerrain.set(terrain, rows ? { grid: terrain.grid, rows } : null);
     }
     const mapped = mappedWaterByTerrain.get(terrain);
