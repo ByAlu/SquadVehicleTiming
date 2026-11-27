@@ -54,6 +54,7 @@
         <div><h2 id="map-heading"></h2><p>Click to select or add nodes. Right-click to remove one. Scroll to zoom.</p></div>
         <div class="tools" role="group" aria-label="Route tools">
           <button id="terrain-overlay-toggle" type="button" aria-pressed="false" aria-controls="terrain-overlay terrain-key">Terrain overlay</button>
+          <button id="height-overlay-toggle" type="button" aria-pressed="false" aria-controls="height-overlay height-key map-cursor-label">Height overlay</button>
           <button id="collision-overlay-toggle" type="button" aria-pressed="false" aria-controls="collision-overlay collision-key map-cursor-label">Collision overlay</button>
           <button id="speed-overlay-toggle" type="button" aria-pressed="false" aria-controls="map-cursor-label">Speed overlay</button>
           <button id="draw" type="button" aria-pressed="true">Draw</button>
@@ -66,6 +67,14 @@
         <p class="detail" id="terrain-overlay-status" role="status" hidden></p>
         <ul class="terrain-legend" id="terrain-legend" aria-label="Sampled terrain types"></ul>
       </section>
+      <section class="terrain-key" id="height-key" aria-label="Height overlay" hidden>
+        <p class="detail" id="height-overlay-status" role="status" hidden></p>
+        <div class="height-legend" id="height-legend" hidden>
+          <span>Elevation relative to map origin</span>
+          <div class="height-ramp" id="height-ramp" aria-hidden="true"></div>
+          <div class="height-range"><span id="height-min"></span><span id="height-max"></span></div>
+        </div>
+      </section>
       <section class="terrain-key" id="collision-key" aria-label="Collision overlay" hidden>
         <p class="detail" id="collision-overlay-status" role="status" hidden></p>
         <ul class="terrain-legend" id="collision-legend" aria-label="Collision cell types" hidden></ul>
@@ -75,6 +84,7 @@
         <div class="map-stage" id="stage">
           <img id="map-image" alt="" draggable="false">
           <canvas id="terrain-overlay" aria-hidden="true" hidden></canvas>
+          <canvas id="height-overlay" aria-hidden="true" hidden></canvas>
           <canvas id="collision-overlay" aria-hidden="true" hidden></canvas>
           <svg id="overlay" aria-hidden="true">
             <path id="route-shadow"></path>

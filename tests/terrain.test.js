@@ -26,9 +26,31 @@ test("packed terrain bundles preserve surfaces, steep grades, and missing sample
   assert.deepEqual(Terrain.cellAt(terrain, 0, 0), [150, 45000, null, 0]);
   assert.equal(Terrain.cellAt(terrain, 1, 0), null);
   assert.equal(Terrain.cellAt(terrain, 3, 0), null);
+  assert.equal(Terrain.elevationAt(0.1, 0.5, terrain), 15);
+  assert.equal(Terrain.elevationAt(0.5, 0.5, terrain), null);
+  assert.equal(Terrain.elevationAt(1, 1, terrain), -6);
   assert.equal(Terrain.surfaceAt(0.9, 0.5, terrain).type, "Water");
   assert.deepEqual(Collision.waterGrid(terrain, null).rows, ["..#"]);
   assert.deepEqual(Terrain.cellAt(data, 2, 0), [-60, 0, 0, 1]);
+});
+
+test("height overlay scales to sampled elevations and leaves gaps transparent", () => {
+  const terrain = {
+    grid: { columns: 3, rows: 1 },
+    rows: [[[-25, 0, 0, 0], null, [173, 0, 0, 0]]],
+  };
+  let pixels;
+  const canvas = { getContext: () => ({
+    createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+    putImageData: ({ data }) => { pixels = data; },
+  }) };
+
+  const { min, max } = Terrain.drawHeightOverlay(canvas, terrain);
+  assert.equal(min, -2.5);
+  assert.equal(max, 17.3);
+  assert.deepEqual([...pixels], [41, 38, 92, 255, 0, 0, 0, 0, 247, 226, 132, 255]);
+  assert.equal(Terrain.elevationAt(-0.1, 0.5, terrain), null);
+  assert.equal(Terrain.drawHeightOverlay(canvas, { grid: terrain.grid, rows: [[null, null, null]] }), null);
 });
 
 test("terrain overlay and cursor use deep water at the mask resolution", () => {

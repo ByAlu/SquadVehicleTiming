@@ -36,6 +36,8 @@ The SDK vehicle stats table has no rows in v10.6.1. Measured acceleration from r
 
 ## Terrain data
 
+Turn on **Height overlay** to color the map by elevation. The cursor shows the sampled elevation in meters relative to the map origin.
+
 Export the terrain grid for one or more maps from the repository in PowerShell. New exports default to 1 m spacing. Use `-SpacingMeters` for a coarser grid and a faster export.
 
 ```powershell

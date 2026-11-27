@@ -21,6 +21,8 @@ const Terrain = (() => {
   const packedCells = new WeakMap();
   const cellBytes = 12;
   const missingGrade = -2147483648;
+  const missingElevation = -32768;
+  const heightColors = ["#29265c", "#345f8c", "#21918c", "#84b860", "#f7e284"];
 
   function rememberCells(terrain, buffer, offset = 0, length = buffer.byteLength) {
     if (length !== terrain.grid.columns * terrain.grid.rows * cellBytes) {
@@ -113,7 +115,7 @@ const Terrain = (() => {
     if (!cells) return terrain.rows[row]?.[column];
     const offset = (row * columns + column) * cellBytes;
     const height = cells.getInt16(offset, true);
-    if (height === -32768) return null;
+    if (height === missingElevation) return null;
     const right = cells.getInt32(offset + 2, true);
     const down = cells.getInt32(offset + 6, true);
     return [height, right === missingGrade ? null : right, down === missingGrade ? null : down,
@@ -124,7 +126,72 @@ const Terrain = (() => {
     const cells = cellsFor(terrain);
     if (!cells) return terrain.rows[row]?.[column]?.[3];
     const offset = (row * terrain.grid.columns + column) * cellBytes;
-    return cells.getInt16(offset, true) === -32768 ? undefined : cells.getUint16(offset + 10, true);
+    return cells.getInt16(offset, true) === missingElevation ? undefined : cells.getUint16(offset + 10, true);
+  }
+
+  function elevationDm(terrain, cells, column, row) {
+    return cells ? cells.getInt16((row * terrain.grid.columns + column) * cellBytes, true)
+      : terrain.rows[row]?.[column]?.[0] ?? missingElevation;
+  }
+
+  function elevationAt(x, y, terrain) {
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    const { columns, rows } = terrain.grid;
+    const height = elevationDm(terrain, cellsFor(terrain), Math.min(columns - 1, Math.floor(x * columns)),
+      Math.min(rows - 1, Math.floor(y * rows)));
+    return height === missingElevation ? null : height / 10;
+  }
+
+  function drawHeightOverlay(canvas, terrain) {
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    const { columns, rows } = terrain.grid;
+    const cells = cellsFor(terrain);
+    let low = Infinity;
+    let high = -Infinity;
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        const height = elevationDm(terrain, cells, column, row);
+        if (height === missingElevation) continue;
+        if (height < low) low = height;
+        if (height > high) high = height;
+      }
+    }
+    if (low === Infinity) return null;
+
+    const colors = heightColors.map((hex) => Number.parseInt(hex.slice(1), 16));
+    const ramp = Array.from({ length: 256 }, (_, index) => {
+      const position = index * (colors.length - 1) / 255;
+      const first = Math.min(colors.length - 2, Math.floor(position));
+      const fraction = position - first;
+      return [16, 8, 0].map((shift) => {
+        const from = (colors[first] >> shift) & 255;
+        const to = (colors[first + 1] >> shift) & 255;
+        return Math.round(from + (to - from) * fraction);
+      });
+    });
+    // Limit the display canvas while sampling the cursor from the full terrain grid.
+    const scale = Math.min(1, 2048 / Math.max(columns, rows));
+    const width = canvas.width = Math.max(1, Math.round(columns * scale));
+    const height = canvas.height = Math.max(1, Math.round(rows * scale));
+    const image = context.createImageData(width, height);
+    const columnAt = Int32Array.from({ length: width }, (_, x) => Math.floor((x + 0.5) * columns / width));
+    for (let y = 0; y < height; y++) {
+      const row = Math.floor((y + 0.5) * rows / height);
+      for (let x = 0; x < width; x++) {
+        const value = elevationDm(terrain, cells, columnAt[x], row);
+        if (value === missingElevation) continue;
+        const [red, green, blue] = ramp[high === low ? 128 : Math.round(255 * (value - low) / (high - low))];
+        const offset = (y * width + x) * 4;
+        image.data[offset] = red;
+        image.data[offset + 1] = green;
+        image.data[offset + 2] = blue;
+        image.data[offset + 3] = 255;
+      }
+    }
+    context.putImageData(image, 0, 0);
+    const gradient = low === high ? `rgb(${ramp[128].join(",")})` : `linear-gradient(to right, ${heightColors.join(", ")})`;
+    return { min: low / 10, max: high / 10, gradient };
   }
 
   function sampleCell(x, y, terrain) {
@@ -297,7 +364,7 @@ const Terrain = (() => {
     });
   }
 
-  return { maxGrade, load, drawSurfaceOverlay, cellAt, surfaceIndexAt, surfaceAt, waterAt, wadingDepthAt, wadingDepthInCell, wadingGear,
+  return { maxGrade, load, drawSurfaceOverlay, drawHeightOverlay, elevationAt, cellAt, surfaceIndexAt, surfaceAt, waterAt, wadingDepthAt, wadingDepthInCell, wadingGear,
     wadingSpeedLimitKmh, sampleRoute, drivingConditions, paceForSurface, paceForGrade };
 })();
 

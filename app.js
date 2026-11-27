@@ -21,6 +21,11 @@ const speedOverlayToggle = find("speed-overlay-toggle");
 const terrainKey = find("terrain-key");
 const terrainLegend = find("terrain-legend");
 const terrainOverlayStatus = find("terrain-overlay-status");
+const heightOverlay = find("height-overlay");
+const heightOverlayToggle = find("height-overlay-toggle");
+const heightKey = find("height-key");
+const heightLegend = find("height-legend");
+const heightOverlayStatus = find("height-overlay-status");
 const collisionOverlay = find("collision-overlay");
 const collisionOverlayToggle = find("collision-overlay-toggle");
 const collisionKey = find("collision-key");
@@ -60,6 +65,7 @@ let mapHeight = 0;
 let terrainGrid = null;
 let paintedTerrain = null;
 let paintedWater = null;
+let paintedHeight = null;
 let terrainPointer = null;
 let terrainStatus = "unavailable";
 let collisionGrid = null;
@@ -77,6 +83,7 @@ function selectMap() {
   terrainGrid = null;
   paintedTerrain = null;
   paintedWater = null;
+  paintedHeight = null;
   collisionGrid = null;
   paintedCollision = null;
   paintedCollisionWater = null;
@@ -166,6 +173,7 @@ function renderOverlayLegend(legend, entries) {
 
 function updateMapOverlays() {
   updateTerrainOverlay();
+  updateHeightOverlay();
   updateCollisionOverlay();
   updateMapCursorLabel();
 }
@@ -193,6 +201,33 @@ function updateTerrainOverlay() {
       paintedWater = water;
     }
   }
+}
+
+function updateHeightOverlay() {
+  const active = heightOverlayToggle.getAttribute("aria-pressed") === "true";
+  heightKey.hidden = !active;
+  heightOverlay.hidden = true;
+  heightLegend.hidden = true;
+  heightOverlayStatus.hidden = true;
+  if (!active) return;
+
+  if (terrainGrid && paintedHeight !== terrainGrid) {
+    const range = Terrain.drawHeightOverlay(heightOverlay, terrainGrid);
+    if (range) {
+      find("height-ramp").style.background = range.gradient;
+      find("height-min").textContent = `${numeric.format(range.min)} m`;
+      find("height-max").textContent = range.min === range.max ? "" : `${numeric.format(range.max)} m`;
+      paintedHeight = terrainGrid;
+    }
+  }
+  if (!paintedHeight) {
+    heightOverlayStatus.hidden = false;
+    heightOverlayStatus.textContent = terrainStatus === "loading" ? "Loading elevation data…"
+      : "Height overlay unavailable for this map.";
+    return;
+  }
+  heightOverlay.hidden = false;
+  heightLegend.hidden = false;
 }
 
 function updateCollisionOverlay() {
@@ -904,9 +939,10 @@ function tileSpeedLabel({ ground, model, speed, tracked, waterSpeedKmh, wadingPr
 
 function updateMapCursorLabel() {
   const showTerrain = !terrainOverlay.hidden && paintedTerrain;
+  const showHeight = !heightOverlay.hidden && paintedHeight;
   const showCollision = !collisionOverlay.hidden && paintedCollision;
   const showSpeed = speedOverlayToggle.getAttribute("aria-pressed") === "true";
-  if ((!showTerrain && !showCollision && !showSpeed) || !drawnWidth || !drawnHeight) {
+  if ((!showTerrain && !showHeight && !showCollision && !showSpeed) || !drawnWidth || !drawnHeight) {
     mapCursorLabel.hidden = true;
     return;
   }
@@ -923,6 +959,10 @@ function updateMapCursorLabel() {
   if (showTerrain) {
     const surface = Terrain.surfaceAt(normalized.x, normalized.y, paintedTerrain, paintedWater);
     lines.push(surface ? surfaceName(surface.type) : "No terrain sample");
+  }
+  if (showHeight) {
+    const height = Terrain.elevationAt(normalized.x, normalized.y, paintedHeight);
+    lines.push(height === null ? "No elevation sample" : `Elevation · ${numeric.format(height)} m`);
   }
   if (showCollision) {
     const status = Collision.overlayLabelAt(normalized.x, normalized.y, paintedCollision, paintedCollisionWater);
@@ -1134,7 +1174,15 @@ if (sdk?.maps.length && vehicles?.length) {
   removeAutoPathButton.addEventListener("click", removeAutoRoute);
   showLegTimes.addEventListener("change", updateEstimate);
   terrainOverlayToggle.addEventListener("click", () => {
-    terrainOverlayToggle.setAttribute("aria-pressed", String(terrainOverlayToggle.getAttribute("aria-pressed") !== "true"));
+    const active = terrainOverlayToggle.getAttribute("aria-pressed") !== "true";
+    terrainOverlayToggle.setAttribute("aria-pressed", String(active));
+    if (active) heightOverlayToggle.setAttribute("aria-pressed", "false");
+    updateMapOverlays();
+  });
+  heightOverlayToggle.addEventListener("click", () => {
+    const active = heightOverlayToggle.getAttribute("aria-pressed") !== "true";
+    heightOverlayToggle.setAttribute("aria-pressed", String(active));
+    if (active) terrainOverlayToggle.setAttribute("aria-pressed", "false");
     updateMapOverlays();
   });
   collisionOverlayToggle.addEventListener("click", () => {

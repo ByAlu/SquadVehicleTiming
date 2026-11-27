@@ -114,6 +114,9 @@ select {
 .terrain-legend[hidden] { display: none; }
 .terrain-legend li { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .8rem; }
 .terrain-swatch { width: .7rem; height: .7rem; border: 1px solid #ffffff40; border-radius: .15rem; }
+.height-legend { width: min(100%, 20rem); color: var(--muted); font-size: .8rem; }
+.height-ramp { height: .55rem; margin: .3rem 0; border: 1px solid #ffffff40; border-radius: .2rem; }
+.height-range { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
 .remove-vehicle { padding: .2rem .4rem; font-size: .75rem; }
 .viewport {
   position: relative;
@@ -132,8 +135,9 @@ select {
 .map-stage { position: absolute; top: 0; left: 0; visibility: hidden; user-select: none; }
 .map-stage.ready { visibility: visible; }
 .map-stage img, .map-stage canvas, .map-stage svg { display: block; position: absolute; width: 100%; height: 100%; pointer-events: none; }
-#terrain-overlay, #collision-overlay { image-rendering: pixelated; }
+#terrain-overlay, #height-overlay, #collision-overlay { image-rendering: pixelated; }
 #terrain-overlay { opacity: .62; }
+#height-overlay { opacity: .72; }
 #collision-overlay { opacity: .76; }
 .map-stage canvas[hidden] { display: none; }
 .map-cursor-label {
