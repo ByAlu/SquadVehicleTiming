@@ -56,7 +56,7 @@ The exporter also builds each map's compressed browser bundle. After editing the
 
 ## Vehicle collision data
 
-All 25 maps with a calibrated SDK gameplay layer include a collision grid. The checked-in base grids use roughly 4 m spacing. New exports default to 1 m spacing. Use `-SpacingMeters 4` for smaller files and faster exports.
+All 25 maps with a calibrated SDK gameplay layer include a collision grid sampled at roughly 1 m spacing, the default for new exports. Use `-SpacingMeters 4` for smaller files and faster exports.
 
 ```powershell
 .\tools\export-collision.ps1 -Map 'Logar Valley'
@@ -67,7 +67,7 @@ The exporter loads gameplay geometry and traces the SDK's `Vehicle` collision pr
 
 The planner highlights blocked ground links and withholds ground-vehicle ETAs for paths through them. Auto-routing avoids detected blockers. Missing collision data and unsampled cells are reported separately. This is a static grid with one support height per cell. Clearance can differ for individual vehicles, underpasses, and objects that appear during a match.
 
-Harju's bridge and approaches include a 1 m detail grid. The collision overlay and vehicle routing use these finer samples for the deck, handrails, and water around the crossing.
+When Harju is exported at coarser spacing, the exporter includes a 1 m detail grid for the bridge and approaches. The collision overlay and vehicle routing use these finer samples for the deck, handrails, and water around the crossing.
 
 The deep-water mask uses the SDK water collision channel and compares each water surface with the sampled ground or bridge deck. Non-amphibious ground routes avoid water at least 1.5 m deep and water where the scan found no support. They can cross shallower water when the collision grid shows clear ground. When a depth scan is unavailable, the planner uses the terrain scan's Water classification as a fallback. Manual links through blocked water hide the route line and ETA.
 

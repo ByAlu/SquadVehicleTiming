@@ -1,2 +1,4 @@
-- Fix: in al basrah terrain overlay, it display water as sand
-- Feat: add collision overlay map
+- add feature that if vehicle is small enough to pass a route 
+- add feature to modify collision overlay with restore to default option
+- add feature to no ground seen as collision, see anvil map
+- add check for sudden height change while routing. too much height, lets say above tire size diff can not be traced

@@ -19,7 +19,7 @@ test("auto-routing finds a clear detour through the Logar Valley compound", () =
   const width = terrain.grid.columns * terrain.grid.columnSpacingMeters;
   const height = terrain.grid.rows * terrain.grid.rowSpacingMeters;
   const start = { x: 0.49510064, y: 0.39804176 };
-  const end = { x: 0.50340307, y: 0.47882778 };
+  const end = { x: 0.50283553, y: 0.47882778 };
   assert.equal(Collision.segment(start, end, collision), "blocked");
   assert.equal(Collision.segment(start, start, collision), "clear");
   assert.equal(Collision.segment(end, end, collision), "clear");
@@ -202,25 +202,23 @@ function loadMapCollision(t, name) {
 
 test("Yehorivka marks the verified barns, house, and walls as obstacles", async (t) => {
   const collision = await loadMapCollision(t, "Yehorivka");
-  const { columns, rows } = collision.grid;
-  const center = (column, row) => ({ x: (column + 0.5) / columns, y: (row + 0.5) / rows });
-  for (const [column, row] of [[811, 947], [926, 980], [797, 946], [846, 973], [840, 984]]) {
+  const center = (column, row) => ({ x: (column + 0.5) / 6351, y: (row + 0.5) / 6350 });
+  for (const [column, row] of [[3244, 3788], [3706, 3920], [3189, 3784], [3385, 3892], [3360, 3935]]) {
     const point = center(column, row);
     assert.equal(Collision.overlayLabelAt(point.x, point.y, collision), "Solid obstacle", `${column}, ${row}`);
     assert.equal(Collision.segment(point, point, collision), "blocked", `${column}, ${row}`);
   }
-  const openCell = center(827, 978);
+  const openCell = center(3309, 3912);
   assert.equal(Collision.segment(openCell, openCell, collision), "clear");
 });
 
 test("Black Coast ignores both staging barriers and detects overlapping physical obstacles", async (t) => {
   const collision = await loadMapCollision(t, "Black Coast");
-  const { columns, rows } = collision.grid;
   for (const [column, row, blocked] of [
-    [831, 175, false], [834, 175, true],
-    [647, 737, false], [648, 737, true], [650, 737, true],
+    [3326, 702, false], [3339, 702, true],
+    [2590, 2950, false], [2592, 2949, true], [2603, 2948, true],
   ]) {
-    const point = { x: (column + 0.5) / columns, y: (row + 0.5) / rows };
+    const point = { x: (column + 0.5) / 4600, y: (row + 0.5) / 4600 };
     assert.equal(Collision.overlayLabelAt(point.x, point.y, collision), blocked ? "Solid obstacle" : "Clear ground", `${column}, ${row}`);
     assert.equal(Collision.segment(point, point, collision), blocked ? "blocked" : "clear", `${column}, ${row}`);
   }
@@ -231,8 +229,8 @@ test("the Al Basrah ford limits the CTM131 to first gear over a Dirt terrain sam
   const terrain = require("../maps/Al Basrah/terrain.json");
   const collision = await loadMapCollision(t, name);
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
-  const start = { x: 559.25 / columns, y: 732.5 / rows };
-  const end = { x: 559.75 / columns, y: start.y };
+  const start = { x: 0.55925, y: 0.7325 };
+  const end = { x: 0.55975, y: start.y };
   const water = Collision.waterGrid(terrain, collision);
 
   assert.equal(Collision.segment(start, end, collision), "clear");
@@ -313,8 +311,8 @@ test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {
   const terrain = require("../maps/Gorodok/terrain.json");
   const collision = await loadMapCollision(t, name);
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
-  const start = { x: 946.5 / columns, y: 137.5 / rows };
-  const end = { x: 948.5 / columns, y: start.y };
+  const start = { x: 946.5 / 1016, y: 137.5 / 1016 };
+  const end = { x: 948.5 / 1016, y: start.y };
 
   assert.equal(Collision.segment(start, end, Collision.waterGrid(terrain, collision)), "clear");
   assert.equal(AutoPath.find(start, end, terrain, columns * columnSpacingMeters, rows * rowSpacingMeters, {
@@ -327,8 +325,8 @@ test("Tallil Outskirts permits ground routing through a shallow crossing", async
   const terrain = require("../maps/Tallil Outskirts/terrain.json");
   const collision = await loadMapCollision(t, name);
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
-  const start = { x: 497.5 / columns, y: 106.5 / rows };
-  const end = { x: 505.5 / columns, y: start.y };
+  const start = { x: 497.5 / 1171, y: 106.5 / 1170 };
+  const end = { x: 505.5 / 1171, y: start.y };
   const mask = Collision.waterGrid(terrain, collision);
 
   assert.ok(mask.rows.every((row) => !row.includes("#")));
