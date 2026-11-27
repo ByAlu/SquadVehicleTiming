@@ -36,7 +36,7 @@ const Terrain = (() => {
   function cellsFor(terrain) {
     const cached = packedCells.get(terrain);
     if (cached || terrain.schemaVersion !== 2) return cached;
-    // Node callers can read terrain.json directly without loading the browser bundle.
+    // Node callers can also decode packed terrain records directly.
     const bytes = require("node:zlib").gunzipSync(Buffer.from(terrain.cellsGzipBase64, "base64"));
     return rememberCells(terrain, bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }

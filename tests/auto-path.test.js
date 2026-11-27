@@ -10,12 +10,10 @@ const AutoPath = require("../auto-path.js");
 const Collision = require("../collision.js");
 const Terrain = require("../terrain.js");
 
-test("auto-routing finds a clear detour through the Logar Valley compound", () => {
-  const directory = path.join(__dirname, "../maps/Logar Valley");
-  const terrain = JSON.parse(fs.readFileSync(path.join(directory, "terrain.json"), "utf8"));
-  const script = { document: { currentScript: {} } };
-  vm.runInNewContext(fs.readFileSync(path.join(directory, "collision.js"), "utf8"), script);
-  const collision = script.document.currentScript.collisionData;
+test("auto-routing finds a clear detour through the Logar Valley compound", async (t) => {
+  const name = "Logar Valley";
+  useMapFiles(t, name);
+  const [terrain, collision] = await Promise.all([Terrain.load({ name }), Collision.load({ name })]);
   const width = terrain.grid.columns * terrain.grid.columnSpacingMeters;
   const height = terrain.grid.rows * terrain.grid.rowSpacingMeters;
   const start = { x: 0.49510064, y: 0.39804176 };
@@ -201,22 +199,26 @@ test("amphibious auto-routing rejects a steep bank above unsampled water", () =>
   assert.equal(AutoPath.find({ x: 0.25, y: 0.5 }, { x: 0.75, y: 0.5 }, terrain, 8, 4, options), null);
 });
 
-function loadMapCollision(t, name) {
-  const script = { window: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../water-data.js"), "utf8"), script);
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../wading-water-data.js"), "utf8"), script);
+function useMapFiles(t, name) {
   const directory = path.join(__dirname, "../maps", name);
   global.document = {
     createElement: () => ({ remove() {} }),
     head: {
       append(element) {
         const context = { document: { currentScript: element } };
-        vm.runInNewContext(fs.readFileSync(path.join(directory, "collision.js"), "utf8"), context);
+        vm.runInNewContext(fs.readFileSync(path.join(directory, path.basename(element.src)), "utf8"), context);
         element.onload();
       },
     },
   };
   t.after(() => { delete global.document; });
+}
+
+function loadMapCollision(t, name) {
+  useMapFiles(t, name);
+  const script = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../water-data.js"), "utf8"), script);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../wading-water-data.js"), "utf8"), script);
   return Collision.load({ name }, script.window.squadWaterData[name], script.window.squadWadingWaterData[name]);
 }
 
@@ -246,8 +248,8 @@ test("Black Coast ignores both staging barriers and detects overlapping physical
 
 test("the Al Basrah ford limits the CTM131 to first gear over a non-Water terrain sample", async (t) => {
   const name = "Al Basrah";
-  const terrain = require("../maps/Al Basrah/terrain.json");
   const collision = await loadMapCollision(t, name);
+  const terrain = await Terrain.load({ name });
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
   const start = { x: 0.55925, y: 0.7325 };
   const end = { x: 0.55975, y: start.y };
@@ -270,9 +272,8 @@ test("the Al Basrah ford limits the CTM131 to first gear over a non-Water terrai
 
 test("Black Coast water data blocks cells the vehicle collision scan marked clear", async (t) => {
   const name = "Black Coast";
-  const directory = path.join(__dirname, "../maps", name);
   const collision = await loadMapCollision(t, name);
-  const terrain = JSON.parse(fs.readFileSync(path.join(directory, "terrain.json"), "utf8"));
+  const terrain = await Terrain.load({ name });
   const shore = { x: 0.555, y: 0.8 };
   const water = { x: 0.255, y: 0.8 };
   const mask = Collision.waterGrid(terrain, collision);
@@ -301,8 +302,9 @@ test("Harju samples the dry tracks and bridge deck above the ocean collider", as
 });
 
 test("Harju routes across the 1 m bridge deck while retaining handrail collisions", async (t) => {
-  const collision = await loadMapCollision(t, "Harju");
-  const terrain = require("../maps/Harju/terrain.json");
+  const name = "Harju";
+  const collision = await loadMapCollision(t, name);
+  const terrain = await Terrain.load({ name });
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
   assert.equal(columnSpacingMeters, 1);
   assert.equal(rowSpacingMeters, 1);
@@ -329,8 +331,8 @@ test("Harju routes across the 1 m bridge deck while retaining handrail collision
 
 test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {
   const name = "Gorodok";
-  const terrain = require("../maps/Gorodok/terrain.json");
   const collision = await loadMapCollision(t, name);
+  const terrain = await Terrain.load({ name });
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
   const start = { x: 946.5 / 1016, y: 137.5 / 1016 };
   const end = { x: 948.5 / 1016, y: start.y };
@@ -343,8 +345,8 @@ test("Gorodok allows a ford below the 150 cm water threshold", async (t) => {
 
 test("Tallil Outskirts permits ground routing through a shallow crossing", async (t) => {
   const name = "Tallil Outskirts";
-  const terrain = require("../maps/Tallil Outskirts/terrain.json");
   const collision = await loadMapCollision(t, name);
+  const terrain = await Terrain.load({ name });
   const { columns, rows, columnSpacingMeters, rowSpacingMeters } = collision.grid;
   const start = { x: 497.5 / 1171, y: 106.5 / 1170 };
   const end = { x: 505.5 / 1171, y: start.y };

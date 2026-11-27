@@ -44,7 +44,7 @@ Export the terrain grid for one or more maps from the repository in PowerShell. 
 .\tools\export-terrain.ps1 -Map 'Logar Valley'
 ```
 
-Omit `-Map` to export the maps with calibrated SDK bounds in `sdk-data.js`. The editor loads the gameplay worlds locally and writes `maps/<map>/terrain.json`. Loading a map for the first time may take several minutes while Unreal builds cached assets.
+Omit `-Map` to export the maps with calibrated SDK bounds in `sdk-data.js`. The editor loads the gameplay worlds locally and writes `maps/<map>/terrain.js`. Loading a map for the first time may take several minutes while Unreal builds cached assets.
 
 The rows follow the minimap from top to bottom and the cells from left to right. Each cell samples the center of its grid square. Use `floor(u × columns)` and `floor(v × rows)` for normalized minimap coordinates, clamping the right and bottom edges to the last column and row. The grid metadata gives the world origin, directions, and actual sample spacing.
 
@@ -54,7 +54,7 @@ An unsampled cell means the vehicle collision trace found no blocking surface. T
 
 `materialSource` records how the physical material was resolved. A trace result or a collision override identifies the material directly. A mesh material or landscape default is a fallback. An unknown surface still carries elevation and grade when its collision was sampled.
 
-New grids store their samples as gzip-compressed binary records inside the JSON. Each little-endian record stores a signed 16-bit elevation, two signed 32-bit grades, and an unsigned 16-bit surface index. Elevation `-32768` marks an unsampled cell, and grade `-2147483648` marks a missing grade. The exporter also builds each map's browser bundle. Run `python tools/build-terrain.py` to rebuild the bundles. The planner loads one map at a time, including when opened directly from disk in a current browser.
+Each map's terrain bundle stores its samples as gzip-compressed binary records. Each little-endian record stores a signed 16-bit elevation, two signed 32-bit grades, and an unsigned 16-bit surface index. Elevation `-32768` marks an unsampled cell, and grade `-2147483648` marks a missing grade. The planner loads the bundle for the selected map, including when opened directly from disk in a current browser.
 
 ## Vehicle collision data
 
