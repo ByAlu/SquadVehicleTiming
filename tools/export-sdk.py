@@ -62,7 +62,8 @@ ICON_PRESETS = {
 
 # These table rows lack a linked physics export. Use the matching SDK chassis
 # for wading estimates without replacing the selected vehicle's driving model.
-WADING_CHASSIS = {
+CHASSIS_FALLBACKS = {
+    ("BAF", "BAF_FV432_1"): ("BAF", "BAF_FV432_L11A1_RWS"),
     ("CAF", "CAF_TAPV-M2"): ("CAF", "CAF_TAPV"),
     ("GFI", "GFI_BTR-80"): ("RGF", "RGF_BTR-80"),
     ("USMC", "USMC_M1151_M2_Open"): ("USMC", "USMC_M1151_M2"),
@@ -205,6 +206,13 @@ def water_model(variant):
     return None
 
 
+def vehicle_width(variant):
+    width = variant.get("body", {}).get("width")
+    if type(width) in (int, float) and math.isfinite(width) and width > 0:
+        return width / 100
+    return None
+
+
 def driving_profile(variant):
     speed_limit = variant.get("noSlipRpmLimitKmh", {}).get("forward")
     body = variant.get("body", {})
@@ -283,6 +291,8 @@ def driving_profile(variant):
         "gears": gears,
         "torque": torque,
     }
+    if width := vehicle_width(variant):
+        profile["widthMeters"] = width
     if all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in friction_values):
         profile["frictionMultiplier"] = round(sum(friction_values) / len(friction_values), 6)
     slope = {
@@ -340,6 +350,11 @@ def build_vehicle_catalog():
     for vehicle in vehicles:
         row = (vehicle["faction"], vehicle_path(vehicle).stem)
         variants = variants_by_row[row]
+        chassis_variants = variants or variants_by_row.get(CHASSIS_FALLBACKS.get(row), [])
+        if vehicle["type"] not in ("Boat", "Helicopter"):
+            width = max((value for variant in chassis_variants if (value := vehicle_width(variant))), default=0)
+            if width:
+                vehicle["widthMeters"] = width
         profiles = [profile for variant in variants if (profile := driving_profile(variant))]
         if profiles:
             vehicle["drivingProfiles"] = profiles
@@ -348,12 +363,10 @@ def build_vehicle_catalog():
             water = water_model(variants[0])
             if water and all(water_model(variant) == water for variant in variants):
                 vehicle["waterMotion"] = water
-        if not profiles and vehicle["type"] not in ("Boat", "Helicopter"):
-            wading_variants = variants or variants_by_row.get(WADING_CHASSIS.get(row), [])
-            if wading_variants:
-                wading = wading_profile(wading_variants[0])
-                if wading and all(wading_profile(variant) == wading for variant in wading_variants[1:]):
-                    vehicle["wadingProfile"] = wading
+        if not profiles and vehicle["type"] not in ("Boat", "Helicopter") and chassis_variants:
+            wading = wading_profile(chassis_variants[0])
+            if wading and all(wading_profile(variant) == wading for variant in chassis_variants[1:]):
+                vehicle["wadingProfile"] = wading
     rows = ",\n".join(f"  {json.dumps(vehicle, ensure_ascii=False)}" for vehicle in vehicles)
     output = VEHICLE_ROOT / "catalog.js"
     write_text(output, f"// Generated from the faction JSON files by tools/export-sdk.py.\n"

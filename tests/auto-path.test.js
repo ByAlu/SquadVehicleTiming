@@ -31,6 +31,26 @@ test("auto-routing finds a clear detour through the Logar Valley compound", () =
   }
 });
 
+test("auto-routing sends wider vehicles through a wider opening", () => {
+  const grid = { columns: 9, rows: 9 };
+  const cell = [0, 0, 0, 0];
+  const terrain = { grid, rows: Array.from({ length: 9 }, () => Array(9).fill(cell)), surfaces: [{ type: "Dirt" }] };
+  const collision = { grid, rows: Array.from({ length: 9 }, (_, row) =>
+    row === 2 || (row >= 5 && row <= 7) ? "........." : "....#....") };
+  const start = { x: 1.5 / 9, y: 2.5 / 9 };
+  const end = { x: 7.5 / 9, y: 2.5 / 9 };
+  const options = { tracked: false, speedKmh: 60, collision };
+
+  assert.equal(AutoPath.find(start, end, terrain, 9, 9, { ...options, vehicleWidth: 0.8 })?.direct, true);
+  const vehicleWidth = 2.2;
+  const route = AutoPath.find(start, end, terrain, 9, 9, { ...options, vehicleWidth });
+  assert.ok(route?.via.length);
+  assert.equal(route.direct, false);
+  assert.ok(route.via.some(({ y }) => y >= 5 / 9));
+  const footprint = Collision.clearance(collision, 9, 9, vehicleWidth);
+  assert.equal(Collision.path([start, ...route.via, end], collision, null, footprint), "clear");
+});
+
 test("auto-routing avoids deep water and uses the clear crossing", () => {
   const grid = { columns: 5, rows: 5 };
   const cell = [0, 0, 0, 0];

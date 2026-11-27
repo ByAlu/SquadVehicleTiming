@@ -211,7 +211,80 @@ const Collision = (() => {
     return Object.values(overlayTypes).map(({ label, color }) => [label, color]);
   }
 
-  function segment(a, b, data, water = null) {
+  function clearance(data, mapWidth, mapHeight, vehicleWidth) {
+    if (!data || ![mapWidth, mapHeight, vehicleWidth].every((value) => Number.isFinite(value) && value > 0)) return null;
+    const { columns, rows } = data.grid;
+    const width = mapWidth / columns;
+    const height = mapHeight / rows;
+    const radius = vehicleWidth / 2;
+    const radiusSquared = radius * radius;
+    const stepCells = new Map();
+
+    function sweep(ax, ay, bx, by, visit, clip) {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const lengthSquared = dx * dx + dy * dy;
+      const first = Math.ceil((Math.min(ay, by) - radius) / height) - 1;
+      const last = Math.floor((Math.max(ay, by) + radius) / height);
+
+      function intersects(left, top, right, bottom) {
+        if ((!dx && (ax < left || ax > right)) || (!dy && (ay < top || ay > bottom))) return false;
+        const x1 = dx ? (left - ax) / dx : -Infinity;
+        const x2 = dx ? (right - ax) / dx : Infinity;
+        const y1 = dy ? (top - ay) / dy : -Infinity;
+        const y2 = dy ? (bottom - ay) / dy : Infinity;
+        return Math.max(0, Math.min(x1, x2), Math.min(y1, y2)) <= Math.min(1, Math.max(x1, x2), Math.max(y1, y2));
+      }
+
+      function nearCorner(x, y) {
+        const t = lengthSquared ? Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / lengthSquared)) : 0;
+        const offsetX = x - (ax + dx * t);
+        const offsetY = y - (ay + dy * t);
+        return offsetX * offsetX + offsetY * offsetY <= radiusSquared;
+      }
+
+      for (let row = clip ? Math.max(0, first) : first; row <= (clip ? Math.min(rows - 1, last) : last); row++) {
+        const top = row * height;
+        const bottom = top + height;
+        const a = dy ? (top - radius - ay) / dy : 0;
+        const b = dy ? (bottom + radius - ay) / dy : 1;
+        const x1 = ax + dx * Math.max(0, Math.min(a, b));
+        const x2 = ax + dx * Math.min(1, Math.max(a, b));
+        const leftmost = Math.ceil((Math.min(x1, x2) - radius) / width) - 1;
+        const rightmost = Math.floor((Math.max(x1, x2) + radius) / width);
+        for (let column = clip ? Math.max(0, leftmost) : leftmost;
+          column <= (clip ? Math.min(columns - 1, rightmost) : rightmost); column++) {
+          if (clip && data.rows[row][column] !== "#") continue;
+          const left = column * width;
+          const right = left + width;
+          // Expanding a cell by the vehicle radius adds two strips and four rounded corners.
+          if (intersects(left - radius, top, right + radius, bottom) ||
+              intersects(left, top - radius, right, bottom + radius) ||
+              nearCorner(left, top) || nearCorner(left, bottom) || nearCorner(right, top) || nearCorner(right, bottom)) {
+            if (visit(column, row)) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    return {
+      blocksSegment: (a, b) => sweep(a.x * mapWidth, a.y * mapHeight, b.x * mapWidth, b.y * mapHeight, () => true, true),
+      blocksStep(x, y, dx, dy) {
+        const key = (dy + 1) * 3 + dx + 1;
+        if (!stepCells.has(key)) {
+          const offsets = [];
+          sweep(width / 2, height / 2, (dx + 0.5) * width, (dy + 0.5) * height, (column, row) => {
+            offsets.push([column, row]);
+          }, false);
+          stepCells.set(key, offsets);
+        }
+        return stepCells.get(key).some(([column, row]) => data.rows[y + row]?.[x + column] === "#");
+      },
+    };
+  }
+
+  function segment(a, b, data, water = null, footprint = null) {
     if (!data) return "unknown";
     const { columns, rows } = data.grid;
     const ax = a.x * columns;
@@ -222,6 +295,7 @@ const Collision = (() => {
     const dy = by - ay;
     if (![ax, ay, bx, by].every(Number.isFinite) || Math.min(ax, bx, ay, by) < 0 ||
         Math.max(ax, bx) > columns || Math.max(ay, by) > rows) return "unknown";
+    if (footprint?.blocksSegment(a, b)) return "blocked";
     let x = Math.min(columns - 1, Math.floor(ax));
     let y = Math.min(rows - 1, Math.floor(ay));
     const endX = Math.min(columns - 1, Math.floor(bx));
@@ -261,17 +335,17 @@ const Collision = (() => {
     }
   }
 
-  function path(points, data, water = null) {
+  function path(points, data, water = null, footprint = null) {
     let status = "clear";
     for (let index = 1; index < points.length; index++) {
-      const check = segment(points[index - 1], points[index], data, water);
+      const check = segment(points[index - 1], points[index], data, water, footprint);
       if (check === "blocked") return check;
       if (check === "unknown") status = check;
     }
     return status;
   }
 
-  return { load, segment, path, elevations, waterGrid, drawOverlay, overlayLabelAt, inDetail };
+  return { load, segment, path, clearance, elevations, waterGrid, drawOverlay, overlayLabelAt, inDetail };
 })();
 
 if (typeof module !== "undefined") module.exports = Collision;

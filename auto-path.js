@@ -39,13 +39,14 @@ const AutoPath = (() => {
     }
   }
 
-  function find(start, end, terrain, width, height, { tracked, speedKmh, waterSpeedKmh, collision, profile }) {
+  function find(start, end, terrain, width, height, { tracked, speedKmh, waterSpeedKmh, collision, profile, vehicleWidth }) {
     if (!(width > 0 && height > 0 && speedKmh > 0) || !terrain) return null;
     const searchGrid = collision?.grid ?? terrain.grid;
     const { columns, rows } = searchGrid;
     const waterSpeed = waterSpeedKmh > 0 ? waterSpeedKmh / 3.6 : 0;
     const water = collisionMath.waterGrid(terrain, collision, waterSpeed > 0);
     const waterSupport = waterSpeed ? water : null;
+    const footprint = collisionMath.clearance(collision, width, height, vehicleWidth);
     const sameWaterGrid = water?.grid === searchGrid;
     const terrainColumns = Int32Array.from({ length: columns }, (_, x) => Math.floor((x + 0.5) * terrain.grid.columns / columns));
     const terrainRows = Int32Array.from({ length: rows }, (_, y) => Math.floor((y + 0.5) * terrain.grid.rows / rows));
@@ -69,7 +70,7 @@ const AutoPath = (() => {
     const endId = endY * columns + endX;
     const center = (x, y) => ({ x: (x + 0.5) / columns, y: (y + 0.5) / rows });
     const unsafe = (a, b) => (!waterSpeed && water && collisionMath.segment(a, b, water) === "blocked") ||
-      (collision && collisionMath.segment(a, b, collision, waterSupport) !== "clear");
+      (collision && collisionMath.segment(a, b, collision, waterSupport, footprint) !== "clear");
     const terrainAt = (x, y) => terrainMath.cellAt(terrain, terrainColumns[x], terrainRows[y]);
     const waterAt = (x, y) => sameWaterGrid && water.rows[y]?.[x] === "#";
 
@@ -183,7 +184,7 @@ const AutoPath = (() => {
         const via = pathPoints(previous, startId, endId, columns, rows, start, end);
         const points = [start, ...via, end];
         if ((!waterSpeed && water && collisionMath.path(points, water) === "blocked") ||
-            (collision && collisionMath.path(points, collision, waterSupport) !== "clear")) return directResult;
+            (collision && collisionMath.path(points, collision, waterSupport, footprint) !== "clear")) return directResult;
         return { via, direct };
       }
       visited[id] = 1;
@@ -193,7 +194,7 @@ const AutoPath = (() => {
       for (const { dx, dy, distance } of steps) {
         const nx = x + dx;
         const ny = y + dy;
-        if (!canStep(x, y, nx, ny, distance)) continue;
+        if (!canStep(x, y, nx, ny, distance) || footprint?.blocksStep(x, y, dx, dy)) continue;
         const nextId = ny * columns + nx;
         if (visited[nextId]) continue;
         const next = terrainAt(nx, ny);
